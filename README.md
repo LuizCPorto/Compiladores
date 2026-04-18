@@ -4,7 +4,7 @@ Bem-vindos ao repositório do nosso mini-compilador, desenvolvido como trabalho 
 
 Este projeto utiliza a clássica abordagem de separação entre **Análise Léxica** (usando Flex) e **Análise Sintática** (usando Bison) em C/C++.
 
-**Equipe:** Luiz, Matheus, Vrass e Talita.
+**Equipe:** Luiz, Matheus, Vrass e Thalita.
 
 ---
 
