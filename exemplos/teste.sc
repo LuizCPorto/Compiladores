@@ -1,0 +1,1 @@
+INT valor = 10;
