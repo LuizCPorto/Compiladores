@@ -69,14 +69,21 @@
 /* First part of user prologue.  */
 #line 1 "src/parser/parser.y"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <string>
+#include <cstdlib>
 
-/* ISSO RESOLVE O ERRO 1: Avisa ao GCC que a funcao do Lexer existe */
+// Importamos as classes que vocês criaram
+#include "../ast/ast.h"
+#include "../semantica/tabela_simbolos.h" 
+
 extern int yylex();
 void yyerror(const char *s);
 
-#line 80 "src/parser/parser.tab.c"
+// Instanciamos a memória do compilador globalmente
+TabelaSimbolos tabela;
+
+#line 87 "src/parser/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -107,9 +114,9 @@ enum yysymbol_kind_t
   YYSYMBOL_YYEOF = 0,                      /* "end of file"  */
   YYSYMBOL_YYerror = 1,                    /* error  */
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
-  YYSYMBOL_T_INT = 3,                      /* T_INT  */
-  YYSYMBOL_T_ID = 4,                       /* T_ID  */
-  YYSYMBOL_T_NUMERO = 5,                   /* T_NUMERO  */
+  YYSYMBOL_T_ID = 3,                       /* T_ID  */
+  YYSYMBOL_T_NUMERO = 4,                   /* T_NUMERO  */
+  YYSYMBOL_T_INT = 5,                      /* T_INT  */
   YYSYMBOL_T_ATRIB = 6,                    /* T_ATRIB  */
   YYSYMBOL_T_PONTOVIRGULA = 7,             /* T_PONTOVIRGULA  */
   YYSYMBOL_YYACCEPT = 8,                   /* $accept  */
@@ -424,7 +431,7 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  5
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   7
+#define YYLAST   6
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  8
@@ -483,7 +490,7 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    16,    16,    20
+       0,    37,    37,    43
 };
 #endif
 
@@ -499,8 +506,8 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of file\"", "error", "\"invalid token\"", "T_INT", "T_ID",
-  "T_NUMERO", "T_ATRIB", "T_PONTOVIRGULA", "$accept", "programa",
+  "\"end of file\"", "error", "\"invalid token\"", "T_ID", "T_NUMERO",
+  "T_INT", "T_ATRIB", "T_PONTOVIRGULA", "$accept", "programa",
   "declaracao", YY_NULLPTR
 };
 
@@ -520,7 +527,7 @@ static const yytype_int16 yytoknum[] =
 };
 #endif
 
-#define YYPACT_NINF (-5)
+#define YYPACT_NINF (-6)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -534,7 +541,7 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -3,    -2,     1,    -5,    -1,    -5,     2,    -4,    -5
+      -5,    -2,     2,    -6,    -3,    -6,     0,    -1,    -6
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -548,7 +555,7 @@ static const yytype_int8 yydefact[] =
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -5,    -5,    -5
+      -6,    -6,    -6
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
@@ -562,19 +569,19 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       1,     5,     4,     8,     0,     6,     0,     7
+       1,     4,     5,     6,     7,     0,     8
 };
 
 static const yytype_int8 yycheck[] =
 {
-       3,     0,     4,     7,    -1,     6,    -1,     5
+       5,     3,     0,     6,     4,    -1,     7
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     9,    10,     4,     0,     6,     5,     7
+       0,     5,     9,    10,     3,     0,     6,     4,     7
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
@@ -1053,16 +1060,41 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 3: /* declaracao: T_INT T_ID T_ATRIB T_NUMERO T_PONTOVIRGULA  */
-#line 20 "src/parser/parser.y"
-                                               {
-        printf("SUCESSO: A declaracao da variavel foi compreendida pelo Parser!\n");
+  case 2: /* programa: declaracao  */
+#line 37 "src/parser/parser.y"
+               {
+        std::cout << "Compilacao e Analise Semantica finalizadas com sucesso!\n";
     }
-#line 1062 "src/parser/parser.tab.c"
+#line 1069 "src/parser/parser.tab.c"
+    break;
+
+  case 3: /* declaracao: T_INT T_ID T_ATRIB T_NUMERO T_PONTOVIRGULA  */
+#line 43 "src/parser/parser.y"
+                                               {
+        
+        std::string nomeVariavel = (yyvsp[-3].texto); // Pega o texto do T_ID
+        
+        // ==========================================
+        // 1. ANÁLISE SEMÂNTICA (Tabela de Símbolos)
+        // ==========================================
+        if (!tabela.inserir(nomeVariavel, "INT")) {
+            yyerror("Erro Semantico: Variavel ja declarada anteriormente!");
+            YYABORT; // Aborta a compilação imediatamente
+        }
+
+        // ==========================================
+        // 2. CONSTRUÇÃO DA AST (Árvore)
+        // ==========================================
+        // Cria um nó de operação '=' recebendo um número
+        (yyval.ast_no) = new NoOperacao("=", new NoNumero((yyvsp[-1].valorInteiro)), nullptr); 
+        
+        std::cout << "Acao Semantica: '" << nomeVariavel << "' guardada na memoria.\n";
+    }
+#line 1094 "src/parser/parser.tab.c"
     break;
 
 
-#line 1066 "src/parser/parser.tab.c"
+#line 1098 "src/parser/parser.tab.c"
 
       default: break;
     }
@@ -1256,11 +1288,11 @@ yyreturn:
   return yyresult;
 }
 
-#line 25 "src/parser/parser.y"
+#line 65 "src/parser/parser.y"
 
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Error, entrada não reconhecida: %s\n", s);
+    std::cerr << s << "\n";
 }
 
 int main() {

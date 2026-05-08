@@ -54,9 +54,9 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    T_INT = 258,                   /* T_INT  */
-    T_ID = 259,                    /* T_ID  */
-    T_NUMERO = 260,                /* T_NUMERO  */
+    T_ID = 258,                    /* T_ID  */
+    T_NUMERO = 259,                /* T_NUMERO  */
+    T_INT = 260,                   /* T_INT  */
     T_ATRIB = 261,                 /* T_ATRIB  */
     T_PONTOVIRGULA = 262           /* T_PONTOVIRGULA  */
   };
@@ -65,7 +65,18 @@ extern int yydebug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 20 "src/parser/parser.y"
+
+    int valorInteiro;
+    char* texto;
+    No* ast_no;
+
+#line 77 "src/parser/parser.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

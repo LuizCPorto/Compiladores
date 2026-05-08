@@ -1,31 +1,71 @@
 %{
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <string>
+#include <cstdlib>
 
-/* ISSO RESOLVE O ERRO 1: Avisa ao GCC que a funcao do Lexer existe */
+// Importamos as classes que vocês criaram
+#include "../ast/ast.h"
+#include "../semantica/tabela_simbolos.h" 
+
 extern int yylex();
 void yyerror(const char *s);
+
+// Instanciamos a memória do compilador globalmente
+TabelaSimbolos tabela;
 %}
 
-/* ISSO RESOLVE O ERRO 2: Cria a lista oficial de tokens para o Lexer usar */
-%token T_INT T_ID T_NUMERO T_ATRIB T_PONTOVIRGULA
+/* O %union é a mochila. Ele define os tipos de dados que os tokens 
+  podem carregar do Lexer para o Parser.
+*/
+%union {
+    int valorInteiro;
+    char* texto;
+    No* ast_no;
+}
+
+/* Agora dizemos qual token carrega qual tipo de dado */
+%token <texto> T_ID
+%token <valorInteiro> T_NUMERO
+%token T_INT T_ATRIB T_PONTOVIRGULA
+
+/* Dizemos que a regra 'declaracao' vai retornar um objeto da AST */
+%type <ast_no> declaracao
 
 %%
 
 programa:
-    declaracao
+    declaracao {
+        std::cout << "Compilacao e Analise Semantica finalizadas com sucesso!\n";
+    }
     ;
 
 declaracao:
     T_INT T_ID T_ATRIB T_NUMERO T_PONTOVIRGULA {
-        printf("SUCESSO: A declaracao da variavel foi compreendida pelo Parser!\n");
+        
+        std::string nomeVariavel = $2; // Pega o texto do T_ID
+        
+        // ==========================================
+        // 1. ANÁLISE SEMÂNTICA (Tabela de Símbolos)
+        // ==========================================
+        if (!tabela.inserir(nomeVariavel, "INT")) {
+            yyerror("Erro Semantico: Variavel ja declarada anteriormente!");
+            YYABORT; // Aborta a compilação imediatamente
+        }
+
+        // ==========================================
+        // 2. CONSTRUÇÃO DA AST (Árvore)
+        // ==========================================
+        // Cria um nó de operação '=' recebendo um número
+        $$ = new NoOperacao("=", new NoNumero($4), nullptr); 
+        
+        std::cout << "Acao Semantica: '" << nomeVariavel << "' guardada na memoria.\n";
     }
     ;
 
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Error, entrada não reconhecida: %s\n", s);
+    std::cerr << s << "\n";
 }
 
 int main() {
