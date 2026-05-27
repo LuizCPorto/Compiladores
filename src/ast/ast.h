@@ -8,6 +8,8 @@ class No {
 public:
     virtual ~No() {}
     virtual void imprimir() = 0;
+    
+    virtual std::string gerarCodigo() = 0; 
 };
 
 // Nó para representar números inteiros
@@ -17,9 +19,10 @@ public:
     
     NoNumero(int v);
     void imprimir() override;
+    std::string gerarCodigo() override; // Declarando o novo método
 };
 
-// Nó para representar operações (soma, subtração, etc.)
+// Nó para representar operações (+, -, *, /, =)
 class NoOperacao : public No {
 public:
     std::string op;
@@ -28,6 +31,7 @@ public:
     
     NoOperacao(std::string o, No* e, No* d);
     void imprimir() override;
+    std::string gerarCodigo() override; // Declarando o novo método
 };
 
 #endif

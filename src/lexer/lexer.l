@@ -1,5 +1,6 @@
 %{
 #include "../parser/parser.tab.h"
+#include "../ast/ast.h"
 #include <stdlib.h>
 #include <string.h> /* Adicionado para podermos usar o strdup e copiar o texto */
 %}

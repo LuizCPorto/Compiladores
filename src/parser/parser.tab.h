@@ -44,6 +44,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 1 "src/parser/parser.y"
+
+    #include "../ast/ast.h"
+
+#line 53 "src/parser/parser.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -67,13 +73,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 20 "src/parser/parser.y"
+#line 18 "src/parser/parser.y"
 
     int valorInteiro;
     char* texto;
     No* ast_no;
 
-#line 77 "src/parser/parser.tab.h"
+#line 83 "src/parser/parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

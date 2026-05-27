@@ -67,23 +67,20 @@
 
 
 /* First part of user prologue.  */
-#line 1 "src/parser/parser.y"
+#line 5 "src/parser/parser.y"
 
 #include <iostream>
 #include <string>
 #include <cstdlib>
-
-// Importamos as classes que vocês criaram
 #include "../ast/ast.h"
 #include "../semantica/tabela_simbolos.h" 
 
 extern int yylex();
 void yyerror(const char *s);
 
-// Instanciamos a memória do compilador globalmente
 TabelaSimbolos tabela;
 
-#line 87 "src/parser/parser.tab.c"
+#line 84 "src/parser/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -490,7 +487,7 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    37,    37,    43
+       0,    33,    33,    39
 };
 #endif
 
@@ -1061,40 +1058,35 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* programa: declaracao  */
-#line 37 "src/parser/parser.y"
+#line 33 "src/parser/parser.y"
                {
         std::cout << "Compilacao e Analise Semantica finalizadas com sucesso!\n";
     }
-#line 1069 "src/parser/parser.tab.c"
+#line 1066 "src/parser/parser.tab.c"
     break;
 
   case 3: /* declaracao: T_INT T_ID T_ATRIB T_NUMERO T_PONTOVIRGULA  */
-#line 43 "src/parser/parser.y"
+#line 39 "src/parser/parser.y"
                                                {
+        std::string nomeVariavel = (yyvsp[-3].texto);
         
-        std::string nomeVariavel = (yyvsp[-3].texto); // Pega o texto do T_ID
-        
-        // ==========================================
-        // 1. ANÁLISE SEMÂNTICA (Tabela de Símbolos)
-        // ==========================================
-        if (!tabela.inserir(nomeVariavel, "INT")) {
-            yyerror("Erro Semantico: Variavel ja declarada anteriormente!");
-            YYABORT; // Aborta a compilação imediatamente
-        }
+        tabela.inserirIdentificador(nomeVariavel, "INT");
 
-        // ==========================================
-        // 2. CONSTRUÇÃO DA AST (Árvore)
-        // ==========================================
-        // Cria um nó de operação '=' recebendo um número
-        (yyval.ast_no) = new NoOperacao("=", new NoNumero((yyvsp[-1].valorInteiro)), nullptr); 
+        (yyval.ast_no) = new NoOperacao("=", new NoOperacao("+", new NoNumero(10), new NoNumero(5)), nullptr); 
         
-        std::cout << "Acao Semantica: '" << nomeVariavel << "' guardada na memoria.\n";
+        std::cout << "\n--- CODIGO INTERMEDIARIO GERADO ---\n";
+        (yyval.ast_no)->gerarCodigo();
+        std::cout << "-----------------------------------\n";
+        delete (yyval.ast_no);
+        (yyval.ast_no)= nullptr;  
+        free((yyvsp[-3].texto));
+        (yyvsp[-3].texto) = nullptr;
     }
-#line 1094 "src/parser/parser.tab.c"
+#line 1086 "src/parser/parser.tab.c"
     break;
 
 
-#line 1098 "src/parser/parser.tab.c"
+#line 1090 "src/parser/parser.tab.c"
 
       default: break;
     }
@@ -1288,7 +1280,7 @@ yyreturn:
   return yyresult;
 }
 
-#line 65 "src/parser/parser.y"
+#line 56 "src/parser/parser.y"
 
 
 void yyerror(const char *s) {

@@ -447,10 +447,11 @@ char *yytext;
 #line 1 "src/lexer/lexer.l"
 #line 2 "src/lexer/lexer.l"
 #include "../parser/parser.tab.h"
+#include "../ast/ast.h"
 #include <stdlib.h>
 #include <string.h> /* Adicionado para podermos usar o strdup e copiar o texto */
-#line 452 "src/lexer/lex.yy.c"
 #line 453 "src/lexer/lex.yy.c"
+#line 454 "src/lexer/lex.yy.c"
 
 #define INITIAL 0
 
@@ -667,9 +668,9 @@ YY_DECL
 		}
 
 	{
-#line 7 "src/lexer/lexer.l"
+#line 8 "src/lexer/lexer.l"
 
-#line 672 "src/lexer/lex.yy.c"
+#line 673 "src/lexer/lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -728,12 +729,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 8 "src/lexer/lexer.l"
+#line 9 "src/lexer/lexer.l"
 { return T_INT; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 10 "src/lexer/lexer.l"
+#line 11 "src/lexer/lexer.l"
 { 
     /* Converte o texto para número e guarda na gaveta 'valorInteiro' da mochila */
     yylval.valorInteiro = atoi(yytext); 
@@ -742,7 +743,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 16 "src/lexer/lexer.l"
+#line 17 "src/lexer/lexer.l"
 { 
     /* Copia o texto lido e guarda na gaveta 'texto' da mochila */
     yylval.texto = strdup(yytext); 
@@ -751,31 +752,31 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 22 "src/lexer/lexer.l"
+#line 23 "src/lexer/lexer.l"
 { return T_ATRIB; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 23 "src/lexer/lexer.l"
+#line 24 "src/lexer/lexer.l"
 { return T_PONTOVIRGULA; }
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 24 "src/lexer/lexer.l"
+#line 25 "src/lexer/lexer.l"
 { /* ignora espacos */ }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 25 "src/lexer/lexer.l"
+#line 26 "src/lexer/lexer.l"
 { printf("Erro lexico\n"); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 26 "src/lexer/lexer.l"
+#line 27 "src/lexer/lexer.l"
 ECHO;
 	YY_BREAK
-#line 778 "src/lexer/lex.yy.c"
+#line 779 "src/lexer/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1780,7 +1781,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 26 "src/lexer/lexer.l"
+#line 27 "src/lexer/lexer.l"
 
 
 int yywrap() { return 1; }

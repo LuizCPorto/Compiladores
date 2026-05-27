@@ -13,7 +13,7 @@ win_flex -o src/lexer/lex.yy.c src/lexer/lexer.l
 
 :: 3. Junta tudo e cria o executável
 echo [3/3] Compilando o executavel com GCC...
-g++ src/parser/parser.tab.c src/lexer/lex.yy.c -o SimpleC.exe
+g++ src/parser/parser.tab.c src/lexer/lex.yy.c src/ast/ast.cpp src/semantica/tabela_simbolos.cpp -o SimpleC.exe
 
 echo ========================================
 echo Sucesso! O compilador "SimpleC.exe" foi gerado.
