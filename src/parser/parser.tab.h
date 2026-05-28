@@ -64,7 +64,30 @@ extern int yydebug;
     T_NUMERO = 259,                /* T_NUMERO  */
     T_INT = 260,                   /* T_INT  */
     T_ATRIB = 261,                 /* T_ATRIB  */
-    T_PONTOVIRGULA = 262           /* T_PONTOVIRGULA  */
+    T_PONTOVIRGULA = 262,          /* T_PONTOVIRGULA  */
+    T_FLOAT = 263,                 /* T_FLOAT  */
+    T_IF = 264,                    /* T_IF  */
+    T_ELSE = 265,                  /* T_ELSE  */
+    T_WHILE = 266,                 /* T_WHILE  */
+    T_RETURN = 267,                /* T_RETURN  */
+    T_VOID = 268,                  /* T_VOID  */
+    T_MAIN = 269,                  /* T_MAIN  */
+    T_NUMERO_FLOAT = 270,          /* T_NUMERO_FLOAT  */
+    T_VIRGULA = 271,               /* T_VIRGULA  */
+    T_ABRE_PAREN = 272,            /* T_ABRE_PAREN  */
+    T_FECHA_PAREN = 273,           /* T_FECHA_PAREN  */
+    T_ABRE_CHAVE = 274,            /* T_ABRE_CHAVE  */
+    T_FECHA_CHAVE = 275,           /* T_FECHA_CHAVE  */
+    T_MAIS = 276,                  /* T_MAIS  */
+    T_MENOS = 277,                 /* T_MENOS  */
+    T_MULT = 278,                  /* T_MULT  */
+    T_DIV = 279,                   /* T_DIV  */
+    T_MENOR = 280,                 /* T_MENOR  */
+    T_MAIOR = 281,                 /* T_MAIOR  */
+    T_MENOR_IGUAL = 282,           /* T_MENOR_IGUAL  */
+    T_MAIOR_IGUAL = 283,           /* T_MAIOR_IGUAL  */
+    T_IGUAL_IGUAL = 284,           /* T_IGUAL_IGUAL  */
+    T_DIFERENTE = 285              /* T_DIFERENTE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -76,6 +99,7 @@ union YYSTYPE
 #line 18 "src/parser/parser.y"
 
     int valorInteiro;
+    float valorFloat;
     char* texto;
     No* ast_no;
 

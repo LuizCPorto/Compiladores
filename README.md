@@ -20,7 +20,7 @@ Para manter a organização e separar as responsabilidades, o nosso projeto segu
 │   └── parser/
 │       └── parser.y     # Regras do Analisador Sintático (Gramática EBNF)
 ├── exemplos/
-│   └── codigo.txt       # Arquivos com código-fonte para testes
+│   └── teste.sc         # Arquivos com código-fonte para testes
 ├── compilar.bat         # Script de automação que compila o projeto
 └── README.md            # Este arquivo
 
@@ -34,11 +34,12 @@ Para que o código compile na sua máquina, você precisa do compilador C/C++ (G
 2. Instale o compilador C/C++ (MinGW) rodando:
    ```powershell
    choco install mingw -y
-  
-3. Instale o win_flex rodando: 
-    ```powershell
-    choco install winflexbison3 -y
-    ```
+   ```
+
+3. Instale o win_flex rodando:
+   ```powershell
+   choco install winflexbison3 -y
+   ```
 
 ## 🔨 Como Compilar o Projeto
 Nós automatizamos o processo de gerar os arquivos .c e .h e juntar tudo. Sempre que você alterar algo no lexer.l ou no parser.y, basta rodar o nosso script.
@@ -49,18 +50,18 @@ No terminal do VS Code (na raiz do projeto), digite:
    ```
 
 ## 🚀 Como Executar e Testar
-Com o compilador.exe gerado, temos duas formas de testar o funcionamento:
+Com o SimpleC.exe gerado, temos duas formas de testar o funcionamento:
 
 Opção 1: Modo Interativo (Terminal)
 Rodando o executável diretamente, ele fica aguardando você digitar o código.
    ```powershell
-    .\compilador.exe
+    .\SimpleC.exe
    ```
 Exemplo de uso: Digite INT x = 10; e aperte Enter.
 
 Opção 2: Lendo de um arquivo de testes
-A melhor forma de testar blocos maiores de código é escrever tudo no arquivo exemplos/codigo.txt e mandar o compilador ler ele de uma vez.
+A melhor forma de testar blocos maiores de código é escrever tudo no arquivo `exemplos/teste.sc` e mandar o compilador ler ele de uma vez.
 
    ```powershell
-    .\compilador.exe < exemplos\codigo.txt
+    .\SimpleC.exe < exemplos\teste.sc
    ```

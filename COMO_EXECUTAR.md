@@ -121,7 +121,7 @@ Após compilar com sucesso, você verá um arquivo `compilador.exe` na raiz do p
 Execute o compilador sem argumentos:
 
 ```powershell
-.\compilador.exe
+.\SimpleC.exe
 ```
 
 O compilador ficará aguardando entrada. Digite seu código:
@@ -147,7 +147,7 @@ SUCESSO: A declaracao da variavel foi compreendida pelo Parser!
 Crie um arquivo de teste ou use o exemplo fornecido:
 
 ```powershell
-.\compilador.exe < exemplos\teste.sc
+.\SimpleC.exe < exemplos\teste.sc
 ```
 
 **Exemplo de arquivo (`exemplos/teste.sc`):**

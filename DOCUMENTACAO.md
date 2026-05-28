@@ -61,7 +61,7 @@ O projeto utiliza as ferramentas clássicas:
         └────────┬────────┘
                  │
         ┌────────▼────────┐
-        │ compilador.exe  │
+        │ SimpleC.exe     │
         └─────────────────┘
 ```
 
@@ -280,10 +280,10 @@ win_flex -o src/lexer/lex.yy.c src/lexer/lexer.l
 
 ### Passo 3: Compilar com GCC
 ```bash
-g++ src/parser/parser.tab.c src/lexer/lex.yy.c src/ast/ast.cpp -o compilador.exe
+g++ src/parser/parser.tab.c src/lexer/lex.yy.c src/ast/ast.cpp -o SimpleC.exe
 ```
 - Combina todos os arquivos compilados
-- Gera executável final: `compilador.exe`
+- Gera executável final: `SimpleC.exe`
 
 ---
 
