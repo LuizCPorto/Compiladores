@@ -1,82 +1,72 @@
 #ifndef ACTIVATION_RECORD_H
 #define ACTIVATION_RECORD_H
 
+#include <iostream>
 #include <string>
 #include <unordered_map>
-#include <iostream>
 
-// Representa uma variável dentro de um registro de ativação
 struct Variavel {
     std::string nome;
     std::string tipo;
     int valor;
-    std::string escopo; // "local" ou "parametro"
+    int endereco;
+    std::string categoria;
 };
 
-// Registro de Ativação (Activation Record)
-// Criado na pilha sempre que uma função é chamada
 class RegistroAtivacao {
 public:
-    std::string nomeFuncao;         // Nome da função dona deste registro
-    std::string enderecoRetorno;    // Para onde voltar após o retorno
-    int valorRetorno;               // Valor devolvido pela função
-    std::string linkDinamico;       // Nome do registro chamador (AR pai)
-
-    // Variáveis e parâmetros locais desta função
+    std::string nomeFuncao;
+    std::string enderecoRetorno;
+    int valorRetorno;
+    std::string linkDinamico;
     std::unordered_map<std::string, Variavel> variaveis;
 
-    RegistroAtivacao(std::string funcao, std::string retorno, std::string chamador)
+    RegistroAtivacao(const std::string& funcao, const std::string& retorno, const std::string& chamador)
         : nomeFuncao(funcao),
           enderecoRetorno(retorno),
           valorRetorno(0),
           linkDinamico(chamador) {}
 
-    // Adiciona um parâmetro formal ao registro
-    void adicionarParametro(std::string nome, std::string tipo, int valor) {
-        variaveis[nome] = {nome, tipo, valor, "parametro"};
+    void adicionarParametro(const std::string& nome, const std::string& tipo, int valor, int endereco) {
+        variaveis[nome] = {nome, tipo, valor, endereco, "parametro"};
     }
 
-    // Adiciona uma variável local ao registro
-    void adicionarVariavel(std::string nome, std::string tipo, int valor) {
-        variaveis[nome] = {nome, tipo, valor, "local"};
+    void adicionarVariavel(const std::string& nome, const std::string& tipo, int valor, int endereco) {
+        variaveis[nome] = {nome, tipo, valor, endereco, "local"};
     }
 
-    // Atualiza o valor de uma variável existente
-    bool atribuir(std::string nome, int valor) {
-        if (variaveis.find(nome) != variaveis.end()) {
-            variaveis[nome].valor = valor;
-            return true;
-        }
-        return false;
-    }
-
-    // Busca o valor de uma variável
-    bool obterValor(std::string nome, int& out) const {
+    bool atribuir(const std::string& nome, int valor) {
         auto it = variaveis.find(nome);
-        if (it != variaveis.end()) {
-            out = it->second.valor;
-            return true;
-        }
-        return false;
+
+        if (it == variaveis.end())
+            return false;
+
+        it->second.valor = valor;
+        return true;
     }
 
-    // Exibe o conteúdo do registro para fins de log/debug
+    bool obterValor(const std::string& nome, int& out) const {
+        auto it = variaveis.find(nome);
+
+        if (it == variaveis.end())
+            return false;
+
+        out = it->second.valor;
+        return true;
+    }
+
     void imprimir() const {
-        std::cout << "  +----------------------------------+\n";
-        std::cout << "  | AR de: " << nomeFuncao << "\n";
-        std::cout << "  | Link Dinamico -> " << linkDinamico << "\n";
-        std::cout << "  | Endereco Retorno: " << enderecoRetorno << "\n";
-        std::cout << "  | Valor de Retorno: " << valorRetorno << "\n";
-        if (!variaveis.empty()) {
-            std::cout << "  | Variaveis:\n";
-            for (const auto& par : variaveis) {
-                const Variavel& v = par.second;
-                std::cout << "  |   [" << v.escopo << "] "
-                          << v.tipo << " " << v.nome
-                          << " = " << v.valor << "\n";
-            }
+        std::cout << "  AR(" << nomeFuncao << ") retorno=" << enderecoRetorno
+                  << " link=" << linkDinamico
+                  << " valorRetorno=" << valorRetorno << "\n";
+
+        for (const auto& par : variaveis) {
+            const Variavel& v = par.second;
+            std::cout << "    [" << v.categoria << "] "
+                      << v.tipo << " " << v.nome
+                      << " endereco=" << v.endereco
+                      << " valor=" << v.valor << "\n";
         }
-        std::cout << "  +----------------------------------+\n";
     }
 };
 

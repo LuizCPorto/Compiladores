@@ -1,123 +1,169 @@
 #include "tabela_simbolos.h"
 
-// ===== KEYWORDS =====
+#include <iomanip>
+#include <iostream>
 
-bool TabelaSimbolos::ehKeyword(std::string palavra) {
-    for (const auto& kw : keywords) {
-        if (kw == palavra) return true;
+TabelaSimbolos::TabelaSimbolos()
+    : keywords({
+          "if",
+          "else",
+          "while",
+          "return",
+          "int",
+          "float",
+          "void",
+          "main"
+      }) {}
+
+std::string TabelaSimbolos::chave(const std::string& escopo, const std::string& nome) const {
+    return escopo + "::" + nome;
+}
+
+bool TabelaSimbolos::inserirIdentificador(
+    const std::string& nome,
+    const std::string& tipo,
+    const std::string& escopo,
+    const std::string& categoria
+) {
+    std::string k = chave(escopo, nome);
+
+    if (tabela.find(k) != tabela.end()) {
+        std::cerr << "[ERRO SEMANTICO] Identificador '"
+                  << nome
+                  << "' ja declarado no escopo '"
+                  << escopo
+                  << "'.\n";
+
+        return false;
     }
+
+    int endereco = proximoEnderecoPorEscopo[escopo];
+    int tamanho = tipo == "float" ? 8 : 4;
+
+    EntradaSimbolo entrada;
+    entrada.nome = nome;
+    entrada.tipo = tipo;
+    entrada.escopo = escopo;
+    entrada.categoria = categoria;
+    entrada.endereco = endereco;
+    entrada.valor = 0;
+    entrada.temValor = false;
+
+    tabela[k] = entrada;
+    ordemInsercao.push_back(k);
+    proximoEnderecoPorEscopo[escopo] += tamanho;
+
+    return true;
+}
+
+bool TabelaSimbolos::existeNoEscopo(const std::string& nome, const std::string& escopo) const {
+    return tabela.find(chave(escopo, nome)) != tabela.end();
+}
+
+bool TabelaSimbolos::existe(const std::string& nome, const std::string& escopoAtual) const {
+    return existeNoEscopo(nome, escopoAtual) || existeNoEscopo(nome, "global");
+}
+
+std::string TabelaSimbolos::obterTipo(const std::string& nome, const std::string& escopoAtual) const {
+    auto it = tabela.find(chave(escopoAtual, nome));
+
+    if (it != tabela.end())
+        return it->second.tipo;
+
+    it = tabela.find(chave("global", nome));
+
+    if (it != tabela.end())
+        return it->second.tipo;
+
+    return "";
+}
+
+int TabelaSimbolos::obterEndereco(const std::string& nome, const std::string& escopoAtual) const {
+    auto it = tabela.find(chave(escopoAtual, nome));
+
+    if (it != tabela.end())
+        return it->second.endereco;
+
+    it = tabela.find(chave("global", nome));
+
+    if (it != tabela.end())
+        return it->second.endereco;
+
+    return -1;
+}
+
+std::string TabelaSimbolos::obterCategoria(const std::string& nome, const std::string& escopoAtual) const {
+    auto it = tabela.find(chave(escopoAtual, nome));
+
+    if (it != tabela.end())
+        return it->second.categoria;
+
+    it = tabela.find(chave("global", nome));
+
+    if (it != tabela.end())
+        return it->second.categoria;
+
+    return "";
+}
+
+void TabelaSimbolos::atualizarValor(
+    const std::string& nome,
+    const std::string& escopoAtual,
+    double valor
+) {
+    auto it = tabela.find(chave(escopoAtual, nome));
+
+    if (it == tabela.end())
+        it = tabela.find(chave("global", nome));
+
+    if (it != tabela.end()) {
+        it->second.valor = valor;
+        it->second.temValor = true;
+    }
+}
+
+bool TabelaSimbolos::ehKeyword(const std::string& palavra) const {
+    for (const std::string& kw : keywords) {
+        if (kw == palavra)
+            return true;
+    }
+
     return false;
 }
 
-std::vector<std::string> TabelaSimbolos::getKeywords() {
-    return keywords;
-}
+void TabelaSimbolos::listarTodos() const {
+    std::cout << "\n========== TABELA DE SIMBOLOS ==========\n";
+    std::cout << std::left
+              << std::setw(14) << "Nome"
+              << std::setw(10) << "Tipo"
+              << std::setw(12) << "Escopo"
+              << std::setw(12) << "Categoria"
+              << std::setw(10) << "Endereco"
+              << "Valor\n";
 
-// ===== IDENTIFICADORES =====
+    for (const std::string& k : ordemInsercao) {
+        const EntradaSimbolo& e = tabela.at(k);
 
-bool TabelaSimbolos::inserirIdentificador(std::string nome, std::string tipo) {
-    // Primeiro verificamos se a variável já existe
-    if (existeIdentificador(nome)) {
-        return false; // Erro Semântico! Não insere.
+        std::cout << std::left
+                  << std::setw(14) << e.nome
+                  << std::setw(10) << e.tipo
+                  << std::setw(12) << e.escopo
+                  << std::setw(12) << e.categoria
+                  << std::setw(10) << e.endereco;
+
+        if (e.temValor)
+            std::cout << e.valor;
+        else
+            std::cout << "-";
+
+        std::cout << "\n";
     }
-    
-    // Se não existir, guarda na memória
-    identificadores[nome] = tipo;
-    return true; // Sucesso!
-}
 
-bool TabelaSimbolos::existeIdentificador(std::string nome) {
-    // O método 'find' procura a chave. Se for diferente de 'end()', encontrou.
-    return identificadores.find(nome) != identificadores.end();
-}
-
-std::string TabelaSimbolos::obterTipoIdentificador(std::string nome) {
-    if (existeIdentificador(nome)) {
-        return identificadores[nome]; // Devolve o tipo (ex: "INT")
-    }
-    return ""; // Retorna vazio se a variável não existir
-}
-
-std::unordered_map<std::string, std::string> TabelaSimbolos::getIdentificadores() {
-    return identificadores;
-}
-
-// ===== OPERADORES =====
-
-bool TabelaSimbolos::ehOperador(std::string op) {
-    for (const auto& o : operadores) {
-        if (o == op) return true;
-    }
-    return false;
-}
-
-std::vector<std::string> TabelaSimbolos::getOperadores() {
-    return operadores;
-}
-
-// ===== ATRIBUIÇÃO =====
-
-bool TabelaSimbolos::ehAtribuicao(std::string op) {
-    for (const auto& a : atribuicao) {
-        if (a == op) return true;
-    }
-    return false;
-}
-
-std::vector<std::string> TabelaSimbolos::getAtribuicao() {
-    return atribuicao;
-}
-
-// ===== DELIMITADORES =====
-
-bool TabelaSimbolos::ehDelimitador(std::string delim) {
-    for (const auto& d : delimitadores) {
-        if (d == delim) return true;
-    }
-    return false;
-}
-
-std::vector<std::string> TabelaSimbolos::getDelimitadores() {
-    return delimitadores;
-}
-
-// ===== UTILITÁRIOS =====
-
-void TabelaSimbolos::listarTodos() {
-    std::cout << "\n========== TABELA DE SÍMBOLOS ==========" << std::endl;
-    
-    std::cout << "\n[KEYWORDS]" << std::endl;
-    for (const auto& kw : keywords) {
-        std::cout << "  - " << kw << std::endl;
-    }
-    
-    std::cout << "\n[IDENTIFICADORES]" << std::endl;
-    if (identificadores.empty()) {
-        std::cout << "  (nenhum)" << std::endl;
-    } else {
-        for (const auto& id : identificadores) {
-            std::cout << "  - " << id.first << " (" << id.second << ")" << std::endl;
-        }
-    }
-    
-    std::cout << "\n[OPERADORES]" << std::endl;
-    for (const auto& op : operadores) {
-        std::cout << "  - " << op << std::endl;
-    }
-    
-    std::cout << "\n[ATRIBUIÇÃO]" << std::endl;
-    for (const auto& a : atribuicao) {
-        std::cout << "  - " << a << std::endl;
-    }
-    
-    std::cout << "\n[DELIMITADORES]" << std::endl;
-    for (const auto& d : delimitadores) {
-        std::cout << "  - " << d << std::endl;
-    }
-    
-    std::cout << "\n========================================\n" << std::endl;
+    std::cout << "========================================\n";
 }
 
 void TabelaSimbolos::limpar() {
-    identificadores.clear();
+    tabela.clear();
+    ordemInsercao.clear();
+    proximoEnderecoPorEscopo.clear();
 }
