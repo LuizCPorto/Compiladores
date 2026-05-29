@@ -6,11 +6,14 @@
 
 /* =========================================================
    Funções livres de apoio para imprimir a árvore.
-   São inline para que estejam disponíveis em qualquer .cpp
-   que inclua este cabeçalho.
    ========================================================= */
 inline std::string astRamo(bool isLast)   { return isLast ? "L-- " : "|-- "; }
 inline std::string astIndent(bool isLast) { return isLast ? "    " : "|   "; }
+
+/* =========================================================
+   Reseta o contador de temporários do código intermediário.
+   ========================================================= */
+void resetarContadorAST();
 
 /* =========================================================
    Classe base — interface comum a todos os nós da AST.
@@ -19,13 +22,18 @@ class No {
 public:
     virtual ~No() {}
 
-    // Ponto de entrada público: imprime a árvore a partir deste nó
     void imprimir() { imprimirNo("", true); }
 
-    // Cada subclasse implementa este método (chamado internamente)
     virtual void imprimirNo(const std::string& pre, bool isLast) = 0;
-
     virtual std::string gerarCodigo() = 0;
+
+    // Retorna representação infixa do nó (para exibir otimizações)
+    virtual std::string paraExpressao() const = 0;
+
+    // Aplica otimizações independentes de máquina.
+    // Pode retornar 'this' (modificado in-place) ou um nó novo.
+    // O CHAMADOR deve deletar o nó original quando o retorno difere.
+    virtual No* otimizar() { return this; }
 };
 
 /* ---------------------------------------------------------
@@ -37,6 +45,7 @@ public:
     explicit NoNumero(int v);
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
 };
 
 /* ---------------------------------------------------------
@@ -48,6 +57,7 @@ public:
     explicit NoFloat(float v);
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
 };
 
 /* ---------------------------------------------------------
@@ -59,6 +69,7 @@ public:
     explicit NoIdentificador(const std::string& n);
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
 };
 
 /* ---------------------------------------------------------
@@ -73,28 +84,28 @@ public:
     ~NoOperacaoBinaria() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 /* ---------------------------------------------------------
-   Declaração de variável:
-     int x;
-     float y = 3.14;
+   Declaração de variável: int x; / float y = 3.14;
    --------------------------------------------------------- */
 class NoDeclaracao : public No {
 public:
     std::string tipo;
     std::string nome;
-    No* valorInicial; // nullptr se sem inicializacao
+    No* valorInicial;
     NoDeclaracao(const std::string& tipo, const std::string& nome, No* val = nullptr);
     ~NoDeclaracao() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 /* ---------------------------------------------------------
-   Atribuicao:
-     x = 10;
-     x = a + b;
+   Atribuicao: x = expr;
    --------------------------------------------------------- */
 class NoAtribuicao : public No {
 public:
@@ -104,12 +115,12 @@ public:
     ~NoAtribuicao() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 /* ---------------------------------------------------------
-   Retorno:
-     return r;
-     return a + b;
+   Retorno: return expr;
    --------------------------------------------------------- */
 class NoRetorno : public No {
 public:
@@ -118,6 +129,8 @@ public:
     ~NoRetorno() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 /* ---------------------------------------------------------
@@ -130,11 +143,12 @@ public:
     ~NoBloco() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 /* ---------------------------------------------------------
-   Funcao:
-     int soma(int a, int b) { ... }
+   Funcao: int soma(int a, int b) { ... }
    --------------------------------------------------------- */
 class NoFuncao : public No {
 public:
@@ -145,6 +159,8 @@ public:
     ~NoFuncao() override;
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
+    std::string paraExpressao() const override;
+    No* otimizar() override;
 };
 
 #endif

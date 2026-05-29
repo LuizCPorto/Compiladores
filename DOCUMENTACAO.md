@@ -16,12 +16,12 @@
 
 O **SimpleC** é um mini-compilador desenvolvido como trabalho prático para a disciplina de Compiladores da UFT. O projeto implementa as seguintes etapas do processo de compilação:
 
-- **Análise Léxica**: Tokenização do código-fonte (Flex)
+- **Análise Léxica**: Tokenização do código-fonte com classificação de categorias (Flex)
 - **Análise Sintática**: Verificação gramatical e construção da AST (Bison)
 - **Árvore Sintática Abstrata (AST)**: Representação hierárquica do programa
 - **Análise Semântica**: Tabela de símbolos com escopo, verificação de declarações e tipos
 - **Geração de Código Intermediário**: Código de 3 endereços com variáveis temporárias
-- **Ambiente de Execução** *(módulo auxiliar)*: Simulação de pilha de ativação e chamadas de função
+- **Otimização Independente de Máquina**: Simplificação algébrica, dobramento de constantes e eliminação de código morto
 
 O projeto utiliza as ferramentas:
 - **Flex** (`win_flex`): Para gerar o analisador léxico
@@ -65,8 +65,16 @@ A linguagem aceita pelo compilador usa a extensão `.sc` e suporta declarações
         │  - Variáveis temporárias t1.. │
         └────────┬──────────────────────┘
                  │
+        ┌────────▼──────────────────────┐
+        │  OTIMIZAÇÃO INDEPENDENTE      │
+        │  DE MÁQUINA (AST::otimizar)   │
+        │  - Simplificação algébrica    │
+        │  - Dobramento de constantes   │
+        │  - Eliminação de código morto │
+        └────────┬──────────────────────┘
+                 │
         ┌────────▼────────┐
-        │   SimpleC.exe   │
+        │ compilador.exe  │
         └─────────────────┘
 ```
 
@@ -84,26 +92,16 @@ O analisador léxico converte o código-fonte em tokens usando o Flex.
 |-------|-----------------|-----------|
 | `T_INT` | `int` | Palavra-chave tipo inteiro |
 | `T_FLOAT` | `float` | Palavra-chave tipo float |
-| `T_IF` | `if` | Palavra-chave condicional |
-| `T_ELSE` | `else` | Palavra-chave alternativa |
-| `T_WHILE` | `while` | Palavra-chave laço |
 | `T_RETURN` | `return` | Palavra-chave retorno |
-| `T_VOID` | `void` | Palavra-chave tipo void |
 | `T_MAIN` | `main` | Palavra-chave função principal |
 | `T_NUMERO` | `[0-9]+` | Literal inteiro |
 | `T_NUMERO_FLOAT` | `[0-9]+"."[0-9]+` | Literal ponto flutuante |
 | `T_ID` | `[a-zA-Z_][a-zA-Z0-9_]*` | Identificador (variáveis/funções) |
+| `T_ATRIB` | `=` | Operador de atribuição |
 | `T_MAIS` | `+` | Operador adição |
 | `T_MENOS` | `-` | Operador subtração |
 | `T_MULT` | `*` | Operador multiplicação |
 | `T_DIV` | `/` | Operador divisão |
-| `T_ATRIB` | `=` | Operador de atribuição |
-| `T_MENOR` | `<` | Comparação menor que |
-| `T_MAIOR` | `>` | Comparação maior que |
-| `T_MENOR_IGUAL` | `<=` | Comparação menor ou igual |
-| `T_MAIOR_IGUAL` | `>=` | Comparação maior ou igual |
-| `T_IGUAL_IGUAL` | `==` | Comparação igualdade |
-| `T_DIFERENTE` | `!=` | Comparação diferença |
 | `T_PONTOVIRGULA` | `;` | Terminador de instrução |
 | `T_VIRGULA` | `,` | Separador de parâmetros |
 | `T_ABRE_PAREN` | `(` | Abre parêntese |
@@ -115,14 +113,13 @@ O analisador léxico converte o código-fonte em tokens usando o Flex.
 - Ignora espaços em branco, tabulações e quebras de linha
 - Ignora comentários de linha (`// ...`) e de bloco (`/* ... */`)
 - Reporta erro léxico para caracteres não reconhecidos
+- Imprime cada token reconhecido com sua categoria, nome e lexema
 
 **Exemplo de tokenização:**
 ```
 Entrada: int x = 10;
 Saída:   T_INT  T_ID("x")  T_ATRIB  T_NUMERO(10)  T_PONTOVIRGULA
 ```
-
-> **Observação:** Os tokens `T_IF`, `T_ELSE` e `T_WHILE` são reconhecidos pelo lexer mas as regras gramaticais correspondentes ainda não estão implementadas no parser.
 
 ---
 
@@ -194,8 +191,10 @@ fator            → T_NUMERO
 
 **Saída do `programa` (regra raiz):**
 1. Imprime a AST completa (`raiz->imprimir()`)
-2. Gera e imprime o código intermediário (`raiz->gerarCodigo()`)
-3. Lista o conteúdo final da tabela de símbolos (`tabela.listarTodos()`)
+2. Gera e imprime o código intermediário original (`raiz->gerarCodigo()`)
+3. Executa as otimizações e exibe as transformações (`raiz->otimizar()`)
+4. Gera e imprime o código intermediário otimizado
+5. Lista o conteúdo final da tabela de símbolos (`tabela.listarTodos()`)
 
 **Exemplos válidos e inválidos:**
 ```
@@ -212,15 +211,17 @@ fator            → T_NUMERO
 
 ### 3. Árvore Sintática Abstrata (`src/ast/ast.h` e `src/ast/ast.cpp`)
 
-A AST representa a estrutura hierárquica do programa. Cada nó, além de imprimir sua subárvore, é capaz de gerar código intermediário de 3 endereços.
+A AST representa a estrutura hierárquica do programa. Cada nó implementa três responsabilidades: imprimir a subárvore, gerar código intermediário e aplicar otimizações.
 
 **Interface base:**
 ```cpp
 class No {
 public:
-    void imprimir();  // ponto de entrada público
+    void imprimir();
     virtual void imprimirNo(const std::string& pre, bool isLast) = 0;
     virtual std::string gerarCodigo() = 0;
+    virtual std::string paraExpressao() const = 0;
+    virtual No* otimizar() { return this; }
 };
 ```
 
@@ -228,6 +229,7 @@ public:
 ```cpp
 inline std::string astRamo(bool isLast);   // "L-- " ou "|-- "
 inline std::string astIndent(bool isLast); // "    " ou "|   "
+void resetarContadorAST();                 // reseta contador de temporários
 ```
 
 **Classes de nó:**
@@ -253,17 +255,6 @@ t1 = b * 2
 t2 = a + t1
 ```
 
-**Exemplo de AST impressa:**
-```
-Bloco
-|-- Declaracao(int x)
-|   L-- Numero(10)
-L-- Funcao(int, main)
-    L-- Bloco
-        L-- Retorno
-            L-- Numero(0)
-```
-
 ---
 
 ### 4. Análise Semântica (`src/semantica/`)
@@ -275,7 +266,7 @@ struct EntradaSimbolo {
     std::string tipo;     // tipo: "int" ou "float"
     std::string escopo;   // "global" ou nome da função
     int endereco;         // deslocamento de memória (incrementado de 4 em 4)
-    int valor;            // valor corrente (usado em simulações)
+    int valor;            // valor corrente (capturado de literais simples)
 };
 ```
 
@@ -305,55 +296,68 @@ busca em "funcao::nome"  →  busca em "global::nome"  →  erro semântico
 
 ---
 
-### 5. Ambiente de Execução (`src/ambiente/`)
+### 5. Otimização Independente de Máquina (`src/ast/ast.cpp`)
 
-Módulo auxiliar (independente do pipeline principal) que simula a execução em tempo de execução com pilha de ativação.
+A otimização é aplicada sobre a AST após a geração do código intermediário original, percorrendo a árvore em **pós-ordem** (filhos antes do pai). Três categorias de transformações são realizadas:
 
-#### Estrutura `Variavel`
-```cpp
-struct Variavel {
-    std::string nome;
-    std::string tipo;
-    int valor;
-    std::string escopo;   // "local" ou "parametro"
-};
+#### Simplificação Algébrica
+
+Identidades e propriedades algébricas aplicadas em `NoOperacaoBinaria::otimizar()`:
+
+| Regra | Antes | Depois |
+|-------|-------|--------|
+| Identidade aditiva | `x + 0` / `0 + x` | `x` |
+| Identidade subtrativa | `x - 0` | `x` |
+| Cancelamento | `x - x` | `0` |
+| Identidade multiplicativa | `x * 1` / `1 * x` | `x` |
+| Anulação multiplicativa | `x * 0` / `0 * x` | `0` |
+| Identidade divisória | `x / 1` | `x` |
+
+#### Dobramento de Constantes
+
+Expressões com dois operandos literais são avaliadas em tempo de compilação:
 ```
+(3 + 4)  →  7
+(2 * 5)  →  10
+```
+
+#### Eliminação de Código Morto
+
+Em `NoBloco::otimizar()`, instruções após um `return` são removidas:
+```
+return x;
+int y = 5;   ← removido (código morto)
+```
+
+**Exemplo completo:**
+```
+Entrada:  r = (a + 0) * (c - c) + (1 * (f + g) - (h / 1)) + ((a + b) * (f + g))
+Saída:    r = ((f + g) - h) + ((a + b) * (f + g))
+
+Otimizações aplicadas:
+  [SIMPL. ALGEBRICA] (a + 0)           ->  a          [x + 0 = x]
+  [SIMPL. ALGEBRICA] (c - c)           ->  0          [x - x = 0]
+  [SIMPL. ALGEBRICA] (a * 0)           ->  0          [x * 0 = 0]
+  [SIMPL. ALGEBRICA] (1 * (f + g))     ->  (f + g)    [1 * x = x]
+  [SIMPL. ALGEBRICA] (h / 1)           ->  h          [x / 1 = x]
+  [SIMPL. ALGEBRICA] (0 + ((f+g) - h)) ->  (f+g) - h  [0 + x = x]
+```
+
+**Impacto no código intermediário:**
+- Antes da otimização: **12 temporários** (`t1`…`t12`)
+- Após a otimização: **6 temporários** (`t1`…`t6`) — redução de 50%
+
+---
+
+### 6. Ambiente de Execução (`src/ambiente/`) *(módulo auxiliar)*
+
+Módulo independente do pipeline principal que implementa as estruturas de pilha de chamadas para fins didáticos.
 
 #### Classe `RegistroAtivacao`
-
-Representa o frame de uma chamada de função na pilha.
-
-**Campos:** `nomeFuncao`, `enderecoRetorno`, `valorRetorno`, `linkDinamico` (função chamadora), `variaveis`
-
-**Métodos:** `adicionarParametro()`, `adicionarVariavel()`, `atribuir()`, `obterValor()`, `imprimir()`
+Representa o frame de uma chamada de função. Armazena: `nomeFuncao`, `enderecoRetorno`, `valorRetorno`, `linkDinamico` e mapa de variáveis locais/parâmetros.
 
 #### Classe `PilhaExecucao`
-
-Gerencia a pilha de registros de ativação.
-
-| Método | Descrição |
-|--------|-----------|
-| `chamarFuncao(nome, endRetorno)` | Cria e empilha novo AR |
-| `topo()` | Retorna AR do topo (função em execução) |
-| `retornarFuncao()` | Desempilha AR e retorna valor de retorno |
-| `buscarVariavel(nome, out)` | Busca variável do topo para a base |
-| `vazia()` / `tamanho()` | Estado da pilha |
-| `imprimirEstadoPilha()` | Exibe a pilha visualmente |
-
-**Exemplo de saída do módulo:**
-```
-[CALL] Criando AR para: soma | retorna para: ... | chamado por: main
-  === ESTADO DA PILHA (topo -> base) ===
-  ^ Top of Stack
-  +----------------------------------+
-  | AR de: soma
-  | Link Dinamico -> main
-  | Variaveis:
-  |   [parametro] int a = 2
-  |   [parametro] int b = 3
-  +----------------------------------+
-[RETURN] Encerrando AR de: soma | valor de retorno: 5
-```
+Gerencia a pilha de registros de ativação com operações `chamarFuncao()` / `retornarFuncao()` e busca de variáveis do topo para a base.
 
 ---
 
@@ -365,8 +369,9 @@ Compiladores/
 ├── README.md                    # Guia rápido do projeto
 ├── DOCUMENTACAO.md              # Este arquivo
 ├── COMO_EXECUTAR.md             # Guia de execução
+├── relatorioexec.md             # Relatório de execução passo a passo
 ├── compilar.bat                 # Script de compilação (Windows)
-├── SimpleC.exe                  # Executável do compilador gerado
+├── compilador.exe               # Executável do compilador gerado
 │
 ├── src/                         # Código-fonte principal
 │   ├── lexer/
@@ -374,25 +379,26 @@ Compiladores/
 │   │   └── lex.yy.c             # Gerado automaticamente pelo Flex
 │   │
 │   ├── parser/
-│   │   ├── parser.y             # Gramática Bison (análise sintática)
+│   │   ├── parser.y             # Gramática Bison (análise sintática + otimização)
 │   │   ├── parser.tab.c         # Gerado automaticamente pelo Bison
 │   │   └── parser.tab.h         # Headers gerados pelo Bison
 │   │
 │   ├── ast/
 │   │   ├── ast.h                # Declarações das classes AST
-│   │   └── ast.cpp              # Implementação das classes AST
+│   │   └── ast.cpp              # Implementação: impressão, código, otimização
 │   │
 │   ├── semantica/
 │   │   ├── tabela_simbolos.h    # Declaração da Tabela de Símbolos
 │   │   └── tabela_simbolos.cpp  # Implementação da Tabela de Símbolos
 │   │
-│   └── ambiente/                # Módulo de ambiente de execução
+│   └── ambiente/                # Módulo auxiliar (não integrado ao pipeline)
 │       ├── activation_record.h  # Registro de ativação (frame de função)
 │       ├── pilha_execucao.h     # Pilha de execução (call stack)
-│       └── main_ambiente.cpp    # Demo do ambiente de execução
+│       └── main_ambiente.cpp    # Ponto de entrada do compilador
 │
 └── exemplos/
-    └── teste.sc                 # Código-exemplo para testes
+    ├── teste.sc                 # Teste básico (funções e expressões)
+    └── teste03.sc               # Teste de otimizações algébricas
 ```
 
 ---
@@ -403,28 +409,29 @@ Compiladores/
 
 ```
 ┌──────────────────┐
-│  Código Fonte    │  exemplos/teste.sc  (entrada: stdin)
+│  Código Fonte    │  exemplos/teste03.sc
 └────────┬─────────┘
          │
          ▼
 ┌──────────────────┐
 │  Lexer (Flex)    │  lexer.l  →  lex.yy.c
-│                  │  Gera tokens via yylex()
+│                  │  Imprime tokens + retorna constantes via yylex()
 └────────┬─────────┘
          │ stream de tokens
          ▼
 ┌──────────────────────────┐
 │ Parser (Bison)           │  parser.y  →  parser.tab.c
-│                          │  Valida gramática
-│                          │  Aciona tabela_simbolos
+│                          │  Valida gramática, aciona tabela_simbolos
 │                          │  Constrói nós da AST
 └────────┬─────────────────┘
          │ NoBloco* (raiz da AST)
          ▼
 ┌──────────────────────────┐
-│ Impressão da AST         │  No::imprimir()
-│ + Geração de Código      │  No::gerarCodigo()  →  código 3 endereços
-│ + Listagem da Tabela     │  TabelaSimbolos::listarTodos()
+│ AST: imprimir()          │  Exibe a árvore hierárquica
+│ AST: gerarCodigo()       │  Código intermediário original (t1, t2...)
+│ AST: otimizar()          │  Aplica transformações, exibe regras usadas
+│ AST: gerarCodigo() x2    │  Código intermediário otimizado (contador reset)
+│ Tabela: listarTodos()    │  Tabela de símbolos final
 └──────────────────────────┘
 ```
 
@@ -446,6 +453,11 @@ Compiladores/
 - `gerarCodigo()` percorre a árvore em pós-ordem
 - `NoOperacaoBinaria` cria temporários `t1`, `t2`, ... via contador estático
 
+**AST → Otimização:**
+- `otimizar()` também percorre em pós-ordem (filhos antes do pai)
+- Retorna `this` se o nó foi modificado in-place, ou um nó novo se foi substituído
+- O contador de temporários é resetado via `resetarContadorAST()` antes de gerar o código otimizado
+
 ---
 
 ## Fluxo de Compilação
@@ -465,20 +477,26 @@ win_flex -o src/lexer/lex.yy.c src/lexer/lexer.l
 
 ### Passo 3: Compilar com GCC
 ```bat
-g++ src/parser/parser.tab.c src/lexer/lex.yy.c src/ast/ast.cpp src/semantica/tabela_simbolos.cpp -o SimpleC.exe
+g++ src/parser/parser.tab.c src/lexer/lex.yy.c src/ast/ast.cpp ^
+    src/semantica/tabela_simbolos.cpp src/ambiente/main_ambiente.cpp ^
+    -o compilador.exe
 ```
-- Combina parser, lexer, AST e tabela de símbolos
-- Gera o executável `SimpleC.exe`
+- Combina parser, lexer, AST, tabela de símbolos e ponto de entrada
+- Gera o executável `compilador.exe`
 
 ### Executar o compilador
 ```bat
-SimpleC.exe < exemplos\teste.sc
+compilador.exe
 ```
+O arquivo de entrada é definido diretamente em `main_ambiente.cpp` (padrão: `exemplos/teste03.sc`).
 
-A saída exibe:
-1. A AST em formato de árvore visual
-2. O código intermediário de 3 endereços
-3. A tabela de símbolos final com escopo, tipo, endereço e valor
+**A saída exibe, em sequência:**
+1. Análise léxica — tabela de tokens identificados
+2. AST — árvore hierárquica do programa
+3. Código intermediário original (3 endereços)
+4. Otimizações aplicadas (regras e transformações)
+5. Código intermediário otimizado
+6. Tabela de símbolos final
 
 ---
 
@@ -506,12 +524,11 @@ A saída exibe:
 - **Windows**: Scripts em `.bat`; ferramentas `win_flex` e `win_bison`
 
 ### Funcionalidades Pendentes
-- Regras gramaticais para `if/else` e `while` (tokens já reconhecidos pelo lexer)
-- Verificação de tipo em expressões (int vs float)
-- Geração de código para estruturas de controle
-- Otimizações de código intermediário
+- Regras gramaticais para `if/else` e `while` no parser
+- Verificação de compatibilidade de tipos em expressões (int vs float)
+- Geração de código para estruturas de controle de fluxo
 
 ---
 
-**Documento atualizado em:** Maio de 2026  
-**Versão:** 2.0
+**Documento atualizado em:** Maio de 2026
+**Versão:** 3.0

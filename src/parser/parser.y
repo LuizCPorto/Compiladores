@@ -59,7 +59,33 @@ programa:
         std::cout << "\n=== CODIGO INTERMEDIARIO (3 enderecos) ===\n";
         raiz->gerarCodigo();
 
-        std::cout << "\nCompilacao e Analise Semantica finalizadas com sucesso!\n";
+        // --- Salva expressao de cada comando antes de otimizar ---
+        std::vector<std::string> antes;
+        for (auto* c : raiz->comandos)
+            antes.push_back(c->paraExpressao());
+
+        std::cout << "\n=== OTIMIZACAO INDEPENDENTE DE MAQUINA ===\n";
+        std::cout << "(Simplificacao algebrica | Dobramento de constantes | Eliminacao de codigo morto)\n\n";
+
+        raiz->otimizar();
+
+        // --- Mostra before/after por comando que mudou ---
+        bool alguma = false;
+        for (size_t i = 0; i < std::min(antes.size(), raiz->comandos.size()); ++i) {
+            std::string dep = raiz->comandos[i]->paraExpressao();
+            if (antes[i] != dep) {
+                if (!alguma) { std::cout << "\nTransformacoes por instrucao:\n"; alguma = true; }
+                std::cout << "  Antes:  " << antes[i] << "\n";
+                std::cout << "  Depois: " << dep << "\n\n";
+            }
+        }
+        if (!alguma) std::cout << "Nenhuma otimizacao aplicavel encontrada.\n";
+
+        std::cout << "\n=== CODIGO INTERMEDIARIO OTIMIZADO ===\n";
+        resetarContadorAST();
+        raiz->gerarCodigo();
+
+        std::cout << "\nCompilacao finalizada com sucesso!\n";
         tabela.listarTodos();
         delete raiz;
     }

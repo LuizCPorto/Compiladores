@@ -6,24 +6,27 @@ Este documento explica, passo a passo, como cada parte do compilador SimpleC fun
 
 ## Visão da Execução Completa
 
-Ao rodar `compilador.exe`, o programa percorre **5 fases em sequência**:
+Ao rodar `compilador.exe`, o programa percorre **6 fases em sequência**:
 
 ```
 teste03.sc
    │
    ▼
-[1] ANÁLISE LÉXICA       → identifica e classifica tokens
+[1] ANÁLISE LÉXICA            → identifica e classifica tokens
    │
    ▼
-[2] ANÁLISE SINTÁTICA    → valida gramática e constrói a AST
+[2] ANÁLISE SINTÁTICA         → valida gramática e constrói a AST
    │  (integrada com)
-[3] ANÁLISE SEMÂNTICA    → preenche a tabela de símbolos
+[3] ANÁLISE SEMÂNTICA         → preenche a tabela de símbolos
    │
    ▼
-[4] GERAÇÃO DE CÓDIGO    → código intermediário de 3 endereços
+[4] GERAÇÃO DE CÓDIGO         → código intermediário de 3 endereços (original)
    │
    ▼
-[5] TABELA DE SÍMBOLOS   → lista todos os símbolos coletados
+[5] OTIMIZAÇÃO                → simplificação algébrica, dobramento de
+   │                            constantes, eliminação de código morto
+   ▼
+[6] TABELA DE SÍMBOLOS        → lista todos os símbolos coletados
 ```
 
 ---
@@ -56,7 +59,7 @@ Por exemplo:
 
 ### Prioridade de regras
 
-O Flex aplica a regra mais longa que casa. Por isso `<=` é reconhecido antes de `<`, e `"int"` é reconhecido antes do padrão de identificadores, porque as palavras-chave são listadas primeiro no arquivo.
+O Flex aplica a regra mais longa que casa. Por isso `"int"` é reconhecido antes do padrão de identificadores, porque as palavras-chave são listadas primeiro no arquivo.
 
 ### Quando os tokens aparecem na saída
 
@@ -64,14 +67,14 @@ Como o parser consome tokens **um a um** enquanto constrói a árvore, todos os 
 
 ### Exemplo
 
-A linha `int global_x = 100;` gera exatamente:
+A linha `int a = 10;` gera exatamente:
 
 ```
-PALAVRA-CHAVE   T_INT            int
-IDENTIFICADOR   T_ID             global_x
-OPERADOR        T_ATRIB          =
-NUMERO_INT      T_NUMERO         100
-DELIMITADOR     T_PONTOVIRGULA   ;
+PALAVRA-CHAVE   T_INT    int
+IDENTIFICADOR   T_ID     a
+OPERADOR        T_ATRIB  =
+NUMERO_INT      T_NUMERO 10
+DELIMITADOR     T_PONTOVIRGULA  ;
 ```
 
 ---
@@ -132,11 +135,14 @@ Op (+)
 
 ### Regra `programa` — ponto de convergência
 
-Quando toda a entrada é reconhecida, a regra `programa` executa:
+Quando toda a entrada é reconhecida, a regra `programa` executa em sequência:
 
-1. Chama `raiz->imprimir()` → imprime a AST
-2. Chama `raiz->gerarCodigo()` → imprime o código intermediário
-3. Chama `tabela.listarTodos()` → imprime a tabela de símbolos
+1. `raiz->imprimir()` → imprime a AST
+2. `raiz->gerarCodigo()` → imprime o código intermediário original
+3. Salva a expressão de cada comando (para mostrar o before/after)
+4. `raiz->otimizar()` → aplica otimizações e imprime as regras usadas
+5. `resetarContadorAST()` + `raiz->gerarCodigo()` → imprime o código otimizado
+6. `tabela.listarTodos()` → imprime a tabela de símbolos
 
 ---
 
@@ -189,7 +195,7 @@ Isso permite que a tabela de símbolos exiba os valores corretos de variáveis i
 
 ---
 
-## Fase 4 — Árvore Sintática Abstrata (`src/ast/ast.*`)
+## Fase 4 — Árvore Sintática Abstrata e Código Intermediário (`src/ast/ast.*`)
 
 ### O que é a AST
 
@@ -212,13 +218,15 @@ No  (classe base abstrata)
 └── NoFuncao           → funções:             int soma(...) { }
 ```
 
-### Dois métodos em cada nó
+### Três métodos em cada nó
 
-Cada nó implementa dois métodos virtuais:
+Cada nó implementa três responsabilidades:
 
-**`imprimirNo(pre, isLast)`** — imprime a árvore com indentação visual usando `|--` e `L--` para mostrar ramificações.
+**`imprimirNo(pre, isLast)`** — imprime a árvore com indentação visual usando `|--` e `L--`.
 
-**`gerarCodigo()`** — percorre a árvore em **pós-ordem** e emite código de 3 endereços. Retorna o nome do resultado (uma variável ou temporário).
+**`gerarCodigo()`** — percorre em **pós-ordem** e emite código de 3 endereços. Retorna o nome do resultado (variável ou temporário).
+
+**`paraExpressao()`** — retorna a expressão como string infixa, usada para mostrar as transformações da otimização.
 
 ### Código de 3 endereços
 
@@ -231,28 +239,113 @@ return tmp;
 ```
 
 Para `a + b * 2`:
-1. `b * 2` → gera `t2 = b * 2`, retorna `"t2"`
-2. `a + t2` → gera `t3 = a + t2`, retorna `"t3"`
-3. `resultado = t3` → `NoDeclaracao` emite `resultado = t3`
+1. `b * 2` → gera `t1 = b * 2`, retorna `"t1"`
+2. `a + t1` → gera `t2 = a + t1`, retorna `"t2"`
 
 ---
 
-## Fase 5 — Tabela de Símbolos (saída)
+## Fase 5 — Otimização Independente de Máquina (`src/ast/ast.cpp`)
 
-A tabela é impressa pela regra `programa` do parser após a geração do código. Ela mostra o estado final de todos os símbolos coletados durante a análise:
+### O que acontece
+
+Após a geração do código intermediário original, a AST é percorrida novamente pelo método `otimizar()`. A transformação é feita **diretamente nos nós da árvore**, sem criar uma estrutura separada.
+
+### Estratégia bottom-up (pós-ordem)
+
+`NoOperacaoBinaria::otimizar()` primeiro otimiza os filhos e só então analisa o nó atual:
+
+```cpp
+No* novoEsq = esq->otimizar();
+if (novoEsq != esq) { delete esq; esq = novoEsq; }
+
+No* novoDir = dir->otimizar();
+if (novoDir != dir) { delete dir; dir = novoDir; }
+
+// Só agora verifica se o nó atual pode ser simplificado
+```
+
+Isso garante que reduções em cascata funcionem corretamente. Por exemplo, `(a + 0) * (c - c)`:
+1. `(a + 0)` é otimizado para `a`
+2. `(c - c)` é otimizado para `0`
+3. O pai `(a * 0)` é otimizado para `0`
+
+### Gerenciamento de memória
+
+Quando `otimizar()` retorna um nó diferente de `this`, o chamador é responsável por deletar o original:
+
+```cpp
+No* r = esq;      // nó a ser retornado
+esq = nullptr;    // evita que o destrutor de 'this' delete r
+delete dir;       // descarta o operando que foi eliminado
+return r;         // chamador vai deletar 'this'
+```
+
+### As três categorias
+
+**1. Simplificação algébrica** — identidades aplicadas em `NoOperacaoBinaria`:
+
+| Regra | Transformação |
+|-------|--------------|
+| `x + 0 = x` | `(a + 0)` → `a` |
+| `0 + x = x` | `(0 + a)` → `a` |
+| `x - 0 = x` | `(a - 0)` → `a` |
+| `x - x = 0` | `(c - c)` → `0` |
+| `x * 1 = x` | `(1 * expr)` → `expr` |
+| `x * 0 = 0` | `(a * 0)` → `0` |
+| `x / 1 = x` | `(h / 1)` → `h` |
+
+**2. Dobramento de constantes** — quando ambos os operandos são `NoNumero`, a operação é avaliada agora:
 
 ```
-Nome        Tipo    Escopo          Endereco   Valor
-global_x    int     global          0          100
-taxa        float   global          4          5
-valor       int     calcula_dobro   8          0
-dobro       int     calcula_dobro   12         0
-a           int     main            16         10
-b           int     main            20         20
-resultado   int     main            24         0
+(3 + 4)  →  7
+(2 * 5)  →  10
 ```
 
-Cada variável recebe um **endereço de memória virtual** (incrementado de 4 bytes) que representa seu deslocamento em relação ao início da memória de dados. Os valores são os capturados de inicializações literais; expressões compostas ficam como 0 por não terem sido avaliadas em tempo de compilação.
+**3. Eliminação de código morto** — em `NoBloco::otimizar()`, comandos após um `return` são removidos e deletados:
+
+```cpp
+if (dynamic_cast<NoRetorno*>(otim)) morto = true;
+// próximas iterações: delete cmd sem processar
+```
+
+### Saída da fase de otimização
+
+```
+=== OTIMIZACAO INDEPENDENTE DE MAQUINA ===
+(Simplificacao algebrica | Dobramento de constantes | Eliminacao de codigo morto)
+
+  [SIMPL. ALGEBRICA] (a + 0)             ->  a          [x + 0 = x]
+  [SIMPL. ALGEBRICA] (c - c)             ->  0          [x - x = 0]
+  [SIMPL. ALGEBRICA] (a * 0)             ->  0          [x * 0 = 0]
+  [SIMPL. ALGEBRICA] (1 * (f + g))       ->  (f + g)    [1 * x = x]
+  [SIMPL. ALGEBRICA] (h / 1)             ->  h          [x / 1 = x]
+  [SIMPL. ALGEBRICA] (0 + ((f+g) - h))   ->  (f+g) - h  [0 + x = x]
+
+Transformacoes por instrucao:
+  Antes:  int r = ((a + 0) * (c - c) + (1 * (f + g) - (h / 1))) + ((a + b) * (f + g))
+  Depois: int r = (((f + g) - h) + ((a + b) * (f + g)))
+```
+
+O contador de temporários é resetado para `t1` antes de gerar o código otimizado, garantindo numeração limpa.
+
+---
+
+## Fase 6 — Tabela de Símbolos (saída)
+
+A tabela é impressa pela regra `programa` do parser após a geração do código otimizado. Ela mostra o estado final de todos os símbolos coletados durante a análise:
+
+```
+Nome        Tipo    Escopo   Endereco   Valor
+a           int     main     0          10
+b           int     main     4          20
+c           int     main     8          5
+f           int     main     12         3
+g           int     main     16         4
+h           int     main     20         8
+r           int     main     24         0
+```
+
+Cada variável recebe um **endereço de memória virtual** (incrementado de 4 bytes). Os valores são os capturados de inicializações literais; expressões compostas ficam como 0 por não terem sido avaliadas em tempo de compilação.
 
 ---
 
@@ -273,7 +366,13 @@ main_ambiente.cpp
             ├── parser.y: reconhece regras, cria nós da AST
             │       └── chama tabela.inserirIdentificador() / existe()
             │
-            └── regra `programa`: imprime AST + código intermediário + tabela
+            └── regra `programa`:
+                    ├── raiz->imprimir()          → AST
+                    ├── raiz->gerarCodigo()        → código original
+                    ├── raiz->otimizar()           → transforma AST, imprime regras
+                    ├── resetarContadorAST()
+                    ├── raiz->gerarCodigo()        → código otimizado
+                    └── tabela.listarTodos()       → tabela de símbolos
 ```
 
 ---
@@ -285,9 +384,11 @@ main_ambiente.cpp
 | `lexer.l` | `parser.y` | tokens (constantes inteiras) + `yylval` (valor semântico) |
 | `parser.y` | `ast.h/cpp` | instâncias de `No*` (nós da árvore) |
 | `parser.y` | `tabela_simbolos` | inserções e consultas por nome/escopo |
-| `ast.cpp` | saída padrão | texto da AST e código intermediário de 3 endereços |
+| `ast.cpp` (`gerarCodigo`) | saída padrão | código intermediário de 3 endereços |
+| `ast.cpp` (`otimizar`) | saída padrão | mensagens de regras aplicadas |
+| `ast.cpp` (`paraExpressao`) | `parser.y` | strings de expressão para comparação before/after |
 | `tabela_simbolos` | saída padrão | tabela formatada com nome, tipo, escopo, endereço e valor |
 
 ---
 
-**Versão:** 1.1 — Maio de 2026
+**Versão:** 1.2 — Maio de 2026
