@@ -48,6 +48,12 @@ public:
     bool ehKeyword(const std::string& palavra) const;
 
     void listarTodos() const;
+
+    // Retorna todos os simbolos de um escopo especifico
+    std::vector<EntradaSimbolo> obterPorEscopo(const std::string& escopo) const;
+
+    // Retorna nomes de escopos de funcoes (exclui "global")
+    std::vector<std::string> listarEscopos() const;
 };
 
 #endif

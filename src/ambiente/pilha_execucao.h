@@ -23,7 +23,6 @@ public:
                   << " | chamado por: " << chamador << "\n";
 
         pilha.emplace_back(nomeFuncao, enderecoRetorno, chamador);
-        imprimirEstadoPilha();
     }
 
     // Retorna o AR do topo (função atual em execução)
@@ -46,7 +45,6 @@ public:
                   << " | voltando para: " << ar.enderecoRetorno << "\n";
 
         pilha.pop_back();
-        imprimirEstadoPilha();
         return valorRet;
     }
 

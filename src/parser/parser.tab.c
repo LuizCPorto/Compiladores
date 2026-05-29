@@ -72,15 +72,21 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <cstring>
 #include "../ast/ast.h"
-#include "../semantica/tabela_simbolos.h" 
+#include "../semantica/tabela_simbolos.h"
 
 extern int yylex();
 void yyerror(const char *s);
 
-TabelaSimbolos tabela;
+// tabela definida em main_ambiente.cpp
+extern TabelaSimbolos tabela;
 
-#line 84 "src/parser/parser.tab.c"
+std::string escopoAtual    = "global";
+std::string funcaoTipoAtual;
+std::string funcaoNomeAtual;
+
+#line 90 "src/parser/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -113,12 +119,39 @@ enum yysymbol_kind_t
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
   YYSYMBOL_T_ID = 3,                       /* T_ID  */
   YYSYMBOL_T_NUMERO = 4,                   /* T_NUMERO  */
-  YYSYMBOL_T_INT = 5,                      /* T_INT  */
-  YYSYMBOL_T_ATRIB = 6,                    /* T_ATRIB  */
-  YYSYMBOL_T_PONTOVIRGULA = 7,             /* T_PONTOVIRGULA  */
-  YYSYMBOL_YYACCEPT = 8,                   /* $accept  */
-  YYSYMBOL_programa = 9,                   /* programa  */
-  YYSYMBOL_declaracao = 10                 /* declaracao  */
+  YYSYMBOL_T_NUMERO_FLOAT = 5,             /* T_NUMERO_FLOAT  */
+  YYSYMBOL_T_INT = 6,                      /* T_INT  */
+  YYSYMBOL_T_FLOAT = 7,                    /* T_FLOAT  */
+  YYSYMBOL_T_RETURN = 8,                   /* T_RETURN  */
+  YYSYMBOL_T_MAIN = 9,                     /* T_MAIN  */
+  YYSYMBOL_T_ATRIB = 10,                   /* T_ATRIB  */
+  YYSYMBOL_T_PONTOVIRGULA = 11,            /* T_PONTOVIRGULA  */
+  YYSYMBOL_T_VIRGULA = 12,                 /* T_VIRGULA  */
+  YYSYMBOL_T_ABRE_PAREN = 13,              /* T_ABRE_PAREN  */
+  YYSYMBOL_T_FECHA_PAREN = 14,             /* T_FECHA_PAREN  */
+  YYSYMBOL_T_ABRE_CHAVE = 15,              /* T_ABRE_CHAVE  */
+  YYSYMBOL_T_FECHA_CHAVE = 16,             /* T_FECHA_CHAVE  */
+  YYSYMBOL_T_MAIS = 17,                    /* T_MAIS  */
+  YYSYMBOL_T_MENOS = 18,                   /* T_MENOS  */
+  YYSYMBOL_T_MULT = 19,                    /* T_MULT  */
+  YYSYMBOL_T_DIV = 20,                     /* T_DIV  */
+  YYSYMBOL_YYACCEPT = 21,                  /* $accept  */
+  YYSYMBOL_programa = 22,                  /* programa  */
+  YYSYMBOL_lista_comandos = 23,            /* lista_comandos  */
+  YYSYMBOL_comando = 24,                   /* comando  */
+  YYSYMBOL_tipo = 25,                      /* tipo  */
+  YYSYMBOL_declaracao = 26,                /* declaracao  */
+  YYSYMBOL_atribuicao = 27,                /* atribuicao  */
+  YYSYMBOL_retorno = 28,                   /* retorno  */
+  YYSYMBOL_nome_funcao = 29,               /* nome_funcao  */
+  YYSYMBOL_lista_parametros = 30,          /* lista_parametros  */
+  YYSYMBOL_parametros = 31,                /* parametros  */
+  YYSYMBOL_bloco = 32,                     /* bloco  */
+  YYSYMBOL_inicio_funcao = 33,             /* inicio_funcao  */
+  YYSYMBOL_funcao = 34,                    /* funcao  */
+  YYSYMBOL_expressao = 35,                 /* expressao  */
+  YYSYMBOL_termo = 36,                     /* termo  */
+  YYSYMBOL_fator = 37                      /* fator  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -426,21 +459,21 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  5
+#define YYFINAL  22
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   6
+#define YYLAST   57
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  8
+#define YYNTOKENS  21
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  3
+#define YYNNTS  17
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  3
+#define YYNRULES  34
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  9
+#define YYNSTATES  58
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   262
+#define YYMAXUTOK   275
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -480,14 +513,18 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7
+       5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
+      15,    16,    17,    18,    19,    20
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_int8 yyrline[] =
+static const yytype_uint8 yyrline[] =
 {
-       0,    33,    33,    39
+       0,    53,    53,    72,    76,    87,    88,    89,    90,    97,
+      98,   108,   113,   131,   144,   153,   154,   161,   165,   172,
+     173,   180,   181,   188,   201,   212,   213,   214,   221,   222,
+     223,   230,   231,   232,   233
 };
 #endif
 
@@ -504,8 +541,12 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
 static const char *const yytname[] =
 {
   "\"end of file\"", "error", "\"invalid token\"", "T_ID", "T_NUMERO",
-  "T_INT", "T_ATRIB", "T_PONTOVIRGULA", "$accept", "programa",
-  "declaracao", YY_NULLPTR
+  "T_NUMERO_FLOAT", "T_INT", "T_FLOAT", "T_RETURN", "T_MAIN", "T_ATRIB",
+  "T_PONTOVIRGULA", "T_VIRGULA", "T_ABRE_PAREN", "T_FECHA_PAREN",
+  "T_ABRE_CHAVE", "T_FECHA_CHAVE", "T_MAIS", "T_MENOS", "T_MULT", "T_DIV",
+  "$accept", "programa", "lista_comandos", "comando", "tipo", "declaracao",
+  "atribuicao", "retorno", "nome_funcao", "lista_parametros", "parametros",
+  "bloco", "inicio_funcao", "funcao", "expressao", "termo", "fator", YY_NULLPTR
 };
 
 static const char *
@@ -520,11 +561,13 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    (internal) symbol number NUM (which must be that of a token).  */
 static const yytype_int16 yytoknum[] =
 {
-       0,   256,   257,   258,   259,   260,   261,   262
+       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
+     265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
+     275
 };
 #endif
 
-#define YYPACT_NINF (-6)
+#define YYPACT_NINF (-13)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -538,7 +581,12 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -5,    -2,     2,    -6,    -3,    -6,     0,    -1,    -6
+      36,    -7,   -13,   -13,    15,    12,    36,   -13,     2,   -13,
+     -13,   -13,    34,   -13,    15,   -13,   -13,   -13,    15,    16,
+      27,   -13,   -13,   -13,    11,   -13,     3,    23,    39,    10,
+      18,    31,   -13,    15,    15,    15,    15,    15,   -13,   -13,
+     -13,    34,    17,   -13,   -13,    27,    27,   -13,   -13,    20,
+      51,     1,   -13,   -13,   -13,   -13,     7,   -13
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -546,19 +594,26 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,     0,     0,     2,     0,     1,     0,     0,     3
+       0,     0,     9,    10,     0,     0,     2,     4,     0,     5,
+       6,     7,    20,     8,     0,    33,    31,    32,     0,     0,
+      27,    30,     1,     3,    15,    16,     0,     0,    19,     0,
+       0,     0,    14,     0,     0,     0,     0,     0,    11,    23,
+      18,     0,     0,    13,    34,    25,    26,    28,    29,     0,
+       0,     0,    24,    12,    17,    22,     0,    21
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -6,    -6,    -6
+     -13,   -13,     4,    -6,   -11,   -13,   -13,   -13,   -13,   -13,
+     -13,   -13,   -13,   -13,   -12,    19,    21
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     2,     3
+      -1,     5,     6,     7,     8,     9,    10,    11,    26,    28,
+      29,    52,    12,    13,    19,    20,    21
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -566,31 +621,52 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       1,     4,     5,     6,     7,     0,     8
+      23,    27,    30,    14,     1,    24,    31,     2,     3,     4,
+       1,    25,    22,     2,     3,     4,    39,    55,    15,    16,
+      17,    37,    38,    57,    42,    49,    40,    32,    18,    43,
+      50,    53,    51,    33,    34,    33,    34,    33,    34,     1,
+       2,     3,     2,     3,     4,    44,    35,    36,    33,    34,
+      23,    41,    45,    46,    54,    56,    47,    48
 };
 
 static const yytype_int8 yycheck[] =
 {
-       5,     3,     0,     6,     4,    -1,     7
+       6,    12,    14,    10,     3,     3,    18,     6,     7,     8,
+       3,     9,     0,     6,     7,     8,    13,    16,     3,     4,
+       5,    10,    11,    16,    14,    37,     3,    11,    13,    11,
+      41,    11,    15,    17,    18,    17,    18,    17,    18,     3,
+       6,     7,     6,     7,     8,    14,    19,    20,    17,    18,
+      56,    12,    33,    34,     3,    51,    35,    36
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     5,     9,    10,     3,     0,     6,     4,     7
+       0,     3,     6,     7,     8,    22,    23,    24,    25,    26,
+      27,    28,    33,    34,    10,     3,     4,     5,    13,    35,
+      36,    37,     0,    24,     3,     9,    29,    25,    30,    31,
+      35,    35,    11,    17,    18,    19,    20,    10,    11,    13,
+       3,    12,    14,    11,    14,    36,    36,    37,    37,    35,
+      25,    15,    32,    11,     3,    16,    23,    16
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_int8 yyr1[] =
 {
-       0,     8,     9,    10
+       0,    21,    22,    23,    23,    24,    24,    24,    24,    25,
+      25,    26,    26,    27,    28,    29,    29,    30,    30,    31,
+      31,    32,    32,    33,    34,    35,    35,    35,    36,    36,
+      36,    37,    37,    37,    37
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1,     5
+       0,     2,     1,     2,     1,     1,     1,     1,     1,     1,
+       1,     3,     5,     4,     3,     1,     1,     4,     2,     1,
+       0,     3,     2,     3,     4,     3,     3,     1,     3,     3,
+       1,     1,     1,     1,     3
 };
 
 
@@ -1057,36 +1133,248 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2: /* programa: declaracao  */
-#line 33 "src/parser/parser.y"
-               {
-        std::cout << "Compilacao e Analise Semantica finalizadas com sucesso!\n";
+  case 2: /* programa: lista_comandos  */
+#line 53 "src/parser/parser.y"
+                   {
+        NoBloco* raiz = static_cast<NoBloco*>((yyvsp[0].ast_no));
+
+        std::cout << "\n=== ARVORE SINTATICA ABSTRATA (AST) ===\n";
+        raiz->imprimir();
+
+        std::cout << "\n=== CODIGO INTERMEDIARIO (3 enderecos) ===\n";
+        raiz->gerarCodigo();
+
+        std::cout << "\nCompilacao e Analise Semantica finalizadas com sucesso!\n";
+        tabela.listarTodos();
+        delete raiz;
     }
-#line 1066 "src/parser/parser.tab.c"
+#line 1152 "src/parser/parser.tab.c"
     break;
 
-  case 3: /* declaracao: T_INT T_ID T_ATRIB T_NUMERO T_PONTOVIRGULA  */
-#line 39 "src/parser/parser.y"
-                                               {
-        std::string nomeVariavel = (yyvsp[-3].texto);
-        
-        tabela.inserirIdentificador(nomeVariavel, "INT");
+  case 3: /* lista_comandos: lista_comandos comando  */
+#line 72 "src/parser/parser.y"
+                           {
+        static_cast<NoBloco*>((yyvsp[-1].ast_no))->adicionar((yyvsp[0].ast_no));
+        (yyval.ast_no) = (yyvsp[-1].ast_no);
+    }
+#line 1161 "src/parser/parser.tab.c"
+    break;
 
-        (yyval.ast_no) = new NoOperacao("=", new NoOperacao("+", new NoNumero(10), new NoNumero(5)), nullptr); 
-        
-        std::cout << "\n--- CODIGO INTERMEDIARIO GERADO ---\n";
-        (yyval.ast_no)->gerarCodigo();
-        std::cout << "-----------------------------------\n";
-        delete (yyval.ast_no);
-        (yyval.ast_no)= nullptr;  
+  case 4: /* lista_comandos: comando  */
+#line 76 "src/parser/parser.y"
+              {
+        NoBloco* b = new NoBloco();
+        b->adicionar((yyvsp[0].ast_no));
+        (yyval.ast_no) = b;
+    }
+#line 1171 "src/parser/parser.tab.c"
+    break;
+
+  case 5: /* comando: declaracao  */
+#line 87 "src/parser/parser.y"
+                { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1177 "src/parser/parser.tab.c"
+    break;
+
+  case 6: /* comando: atribuicao  */
+#line 88 "src/parser/parser.y"
+                 { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1183 "src/parser/parser.tab.c"
+    break;
+
+  case 7: /* comando: retorno  */
+#line 89 "src/parser/parser.y"
+                 { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1189 "src/parser/parser.tab.c"
+    break;
+
+  case 8: /* comando: funcao  */
+#line 90 "src/parser/parser.y"
+                 { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1195 "src/parser/parser.tab.c"
+    break;
+
+  case 9: /* tipo: T_INT  */
+#line 97 "src/parser/parser.y"
+            { (yyval.texto) = strdup("int"); }
+#line 1201 "src/parser/parser.tab.c"
+    break;
+
+  case 10: /* tipo: T_FLOAT  */
+#line 98 "src/parser/parser.y"
+              { (yyval.texto) = strdup("float"); }
+#line 1207 "src/parser/parser.tab.c"
+    break;
+
+  case 11: /* declaracao: tipo T_ID T_PONTOVIRGULA  */
+#line 108 "src/parser/parser.y"
+                             {
+        tabela.inserirIdentificador((yyvsp[-1].texto), (yyvsp[-2].texto), escopoAtual);
+        (yyval.ast_no) = new NoDeclaracao(std::string((yyvsp[-2].texto)), std::string((yyvsp[-1].texto)), nullptr);
+        free((yyvsp[-2].texto)); free((yyvsp[-1].texto));
+    }
+#line 1217 "src/parser/parser.tab.c"
+    break;
+
+  case 12: /* declaracao: tipo T_ID T_ATRIB expressao T_PONTOVIRGULA  */
+#line 113 "src/parser/parser.y"
+                                                 {
+        tabela.inserirIdentificador((yyvsp[-3].texto), (yyvsp[-4].texto), escopoAtual);
+        // Captura valor inicial quando for literal simples
+        if (NoNumero* n = dynamic_cast<NoNumero*>((yyvsp[-1].ast_no)))
+            tabela.atualizarValor((yyvsp[-3].texto), escopoAtual, n->valor);
+        else if (NoFloat* f = dynamic_cast<NoFloat*>((yyvsp[-1].ast_no)))
+            tabela.atualizarValor((yyvsp[-3].texto), escopoAtual, (int)f->valor);
+        (yyval.ast_no) = new NoDeclaracao(std::string((yyvsp[-4].texto)), std::string((yyvsp[-3].texto)), (yyvsp[-1].ast_no));
+        free((yyvsp[-4].texto)); free((yyvsp[-3].texto));
+    }
+#line 1232 "src/parser/parser.tab.c"
+    break;
+
+  case 13: /* atribuicao: T_ID T_ATRIB expressao T_PONTOVIRGULA  */
+#line 131 "src/parser/parser.y"
+                                          {
+        if (!tabela.existe((yyvsp[-3].texto), escopoAtual))
+            std::cerr << "[ERRO SEMANTICO] Variavel '" << (yyvsp[-3].texto) << "' nao declarada!\n";
+        (yyval.ast_no) = new NoAtribuicao(std::string((yyvsp[-3].texto)), (yyvsp[-1].ast_no));
         free((yyvsp[-3].texto));
-        (yyvsp[-3].texto) = nullptr;
     }
-#line 1086 "src/parser/parser.tab.c"
+#line 1243 "src/parser/parser.tab.c"
+    break;
+
+  case 14: /* retorno: T_RETURN expressao T_PONTOVIRGULA  */
+#line 144 "src/parser/parser.y"
+                                      {
+        (yyval.ast_no) = new NoRetorno((yyvsp[-1].ast_no));
+    }
+#line 1251 "src/parser/parser.tab.c"
+    break;
+
+  case 15: /* nome_funcao: T_ID  */
+#line 153 "src/parser/parser.y"
+            { (yyval.texto) = (yyvsp[0].texto); }
+#line 1257 "src/parser/parser.tab.c"
+    break;
+
+  case 16: /* nome_funcao: T_MAIN  */
+#line 154 "src/parser/parser.y"
+             { (yyval.texto) = strdup("main"); }
+#line 1263 "src/parser/parser.tab.c"
+    break;
+
+  case 17: /* lista_parametros: lista_parametros T_VIRGULA tipo T_ID  */
+#line 161 "src/parser/parser.y"
+                                         {
+        tabela.inserirIdentificador((yyvsp[0].texto), (yyvsp[-1].texto), escopoAtual);
+        free((yyvsp[-1].texto)); free((yyvsp[0].texto));
+    }
+#line 1272 "src/parser/parser.tab.c"
+    break;
+
+  case 18: /* lista_parametros: tipo T_ID  */
+#line 165 "src/parser/parser.y"
+                {
+        tabela.inserirIdentificador((yyvsp[0].texto), (yyvsp[-1].texto), escopoAtual);
+        free((yyvsp[-1].texto)); free((yyvsp[0].texto));
+    }
+#line 1281 "src/parser/parser.tab.c"
+    break;
+
+  case 21: /* bloco: T_ABRE_CHAVE lista_comandos T_FECHA_CHAVE  */
+#line 180 "src/parser/parser.y"
+                                              { (yyval.ast_no) = (yyvsp[-1].ast_no); }
+#line 1287 "src/parser/parser.tab.c"
+    break;
+
+  case 22: /* bloco: T_ABRE_CHAVE T_FECHA_CHAVE  */
+#line 181 "src/parser/parser.y"
+                                              { (yyval.ast_no) = new NoBloco(); }
+#line 1293 "src/parser/parser.tab.c"
+    break;
+
+  case 23: /* inicio_funcao: tipo nome_funcao T_ABRE_PAREN  */
+#line 188 "src/parser/parser.y"
+                                  {
+        funcaoTipoAtual = (yyvsp[-2].texto);
+        funcaoNomeAtual = (yyvsp[-1].texto);
+        escopoAtual     = (yyvsp[-1].texto);
+        free((yyvsp[-2].texto)); free((yyvsp[-1].texto));
+    }
+#line 1304 "src/parser/parser.tab.c"
+    break;
+
+  case 24: /* funcao: inicio_funcao parametros T_FECHA_PAREN bloco  */
+#line 201 "src/parser/parser.y"
+                                                 {
+        NoBloco* corpo = static_cast<NoBloco*>((yyvsp[0].ast_no));
+        (yyval.ast_no) = new NoFuncao(funcaoTipoAtual, funcaoNomeAtual, corpo);
+        escopoAtual = "global";
+    }
+#line 1314 "src/parser/parser.tab.c"
+    break;
+
+  case 25: /* expressao: expressao T_MAIS termo  */
+#line 212 "src/parser/parser.y"
+                            { (yyval.ast_no) = new NoOperacaoBinaria("+", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
+#line 1320 "src/parser/parser.tab.c"
+    break;
+
+  case 26: /* expressao: expressao T_MENOS termo  */
+#line 213 "src/parser/parser.y"
+                              { (yyval.ast_no) = new NoOperacaoBinaria("-", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
+#line 1326 "src/parser/parser.tab.c"
+    break;
+
+  case 27: /* expressao: termo  */
+#line 214 "src/parser/parser.y"
+                            { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1332 "src/parser/parser.tab.c"
+    break;
+
+  case 28: /* termo: termo T_MULT fator  */
+#line 221 "src/parser/parser.y"
+                       { (yyval.ast_no) = new NoOperacaoBinaria("*", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
+#line 1338 "src/parser/parser.tab.c"
+    break;
+
+  case 29: /* termo: termo T_DIV fator  */
+#line 222 "src/parser/parser.y"
+                         { (yyval.ast_no) = new NoOperacaoBinaria("/", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
+#line 1344 "src/parser/parser.tab.c"
+    break;
+
+  case 30: /* termo: fator  */
+#line 223 "src/parser/parser.y"
+                         { (yyval.ast_no) = (yyvsp[0].ast_no); }
+#line 1350 "src/parser/parser.tab.c"
+    break;
+
+  case 31: /* fator: T_NUMERO  */
+#line 230 "src/parser/parser.y"
+                                           { (yyval.ast_no) = new NoNumero((yyvsp[0].valorInteiro)); }
+#line 1356 "src/parser/parser.tab.c"
+    break;
+
+  case 32: /* fator: T_NUMERO_FLOAT  */
+#line 231 "src/parser/parser.y"
+                                           { (yyval.ast_no) = new NoFloat((yyvsp[0].valorFloat)); }
+#line 1362 "src/parser/parser.tab.c"
+    break;
+
+  case 33: /* fator: T_ID  */
+#line 232 "src/parser/parser.y"
+                                           { (yyval.ast_no) = new NoIdentificador(std::string((yyvsp[0].texto))); free((yyvsp[0].texto)); }
+#line 1368 "src/parser/parser.tab.c"
+    break;
+
+  case 34: /* fator: T_ABRE_PAREN expressao T_FECHA_PAREN  */
+#line 233 "src/parser/parser.y"
+                                           { (yyval.ast_no) = (yyvsp[-1].ast_no); }
+#line 1374 "src/parser/parser.tab.c"
     break;
 
 
-#line 1090 "src/parser/parser.tab.c"
+#line 1378 "src/parser/parser.tab.c"
 
       default: break;
     }
@@ -1280,14 +1568,9 @@ yyreturn:
   return yyresult;
 }
 
-#line 56 "src/parser/parser.y"
+#line 236 "src/parser/parser.y"
 
 
 void yyerror(const char *s) {
-    std::cerr << s << "\n";
-}
-
-int main() {
-    yyparse();
-    return 0;
+    std::cerr << "Erro de sintaxe: " << s << "\n";
 }

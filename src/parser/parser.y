@@ -6,13 +6,16 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <cstring>
 #include "../ast/ast.h"
 #include "../semantica/tabela_simbolos.h"
 
 extern int yylex();
 void yyerror(const char *s);
 
-TabelaSimbolos tabela;
+// tabela definida em main_ambiente.cpp
+extern TabelaSimbolos tabela;
+
 std::string escopoAtual    = "global";
 std::string funcaoTipoAtual;
 std::string funcaoNomeAtual;
@@ -28,11 +31,10 @@ std::string funcaoNomeAtual;
 %token <texto>        T_ID
 %token <valorInteiro> T_NUMERO
 %token <valorFloat>   T_NUMERO_FLOAT
-%token T_INT T_FLOAT T_IF T_ELSE T_WHILE T_RETURN T_VOID T_MAIN
+%token T_INT T_FLOAT T_RETURN T_MAIN
 %token T_ATRIB T_PONTOVIRGULA T_VIRGULA
 %token T_ABRE_PAREN T_FECHA_PAREN T_ABRE_CHAVE T_FECHA_CHAVE
 %token T_MAIS T_MENOS T_MULT T_DIV
-%token T_MENOR T_MAIOR T_MENOR_IGUAL T_MAIOR_IGUAL T_IGUAL_IGUAL T_DIFERENTE
 
 %type <ast_no> lista_comandos comando bloco funcao
 %type <ast_no> declaracao atribuicao retorno
@@ -44,8 +46,8 @@ std::string funcaoNomeAtual;
 %%
 
 /* -------------------------------------------------
-   programa: constroi a AST completa, depois imprime
-   e gera o codigo intermediario de uma so vez
+   programa: constroi a AST completa, imprime e
+   gera o codigo intermediario
    ------------------------------------------------- */
 programa:
     lista_comandos {
@@ -79,7 +81,7 @@ lista_comandos:
     ;
 
 /* -------------------------------------------------
-   comando: repassa o no criado pela regra filha
+   comando
    ------------------------------------------------- */
 comando:
     declaracao  { $$ = $1; }
@@ -89,7 +91,7 @@ comando:
     ;
 
 /* -------------------------------------------------
-   tipo: int ou float  →  retorna string alocada
+   tipo: int ou float
    ------------------------------------------------- */
 tipo:
     T_INT   { $$ = strdup("int"); }
@@ -110,6 +112,11 @@ declaracao:
     }
     | tipo T_ID T_ATRIB expressao T_PONTOVIRGULA {
         tabela.inserirIdentificador($2, $1, escopoAtual);
+        // Captura valor inicial quando for literal simples
+        if (NoNumero* n = dynamic_cast<NoNumero*>($4))
+            tabela.atualizarValor($2, escopoAtual, n->valor);
+        else if (NoFloat* f = dynamic_cast<NoFloat*>($4))
+            tabela.atualizarValor($2, escopoAtual, (int)f->valor);
         $$ = new NoDeclaracao(std::string($1), std::string($2), $4);
         free($1); free($2);
     }
@@ -119,7 +126,6 @@ declaracao:
    atribuicao:
      x = 10;
      x = a + b;
-     x = (a + b) * 2;
    ------------------------------------------------- */
 atribuicao:
     T_ID T_ATRIB expressao T_PONTOVIRGULA {
@@ -133,7 +139,6 @@ atribuicao:
 /* -------------------------------------------------
    retorno:
      return r;
-     return a + b;
    ------------------------------------------------- */
 retorno:
     T_RETURN expressao T_PONTOVIRGULA {
@@ -142,7 +147,7 @@ retorno:
     ;
 
 /* -------------------------------------------------
-   nome_funcao: identificador comum ou palavra "main"
+   nome_funcao: identificador ou main
    ------------------------------------------------- */
 nome_funcao:
     T_ID    { $$ = $1; }
@@ -150,8 +155,7 @@ nome_funcao:
     ;
 
 /* -------------------------------------------------
-   lista_parametros / parametros:
-     (int a, int b)   ou   ()
+   lista_parametros / parametros
    ------------------------------------------------- */
 lista_parametros:
     lista_parametros T_VIRGULA tipo T_ID {
@@ -178,8 +182,7 @@ bloco:
     ;
 
 /* -------------------------------------------------
-   inicio_funcao: salva tipo/nome antes de processar
-   parametros (que precisam do escopo correto)
+   inicio_funcao: salva tipo/nome e muda escopo
    ------------------------------------------------- */
 inicio_funcao:
     tipo nome_funcao T_ABRE_PAREN {
@@ -193,7 +196,6 @@ inicio_funcao:
 /* -------------------------------------------------
    funcao:
      int soma(int a, int b) { ... }
-     void main() { ... }
    ------------------------------------------------- */
 funcao:
     inicio_funcao parametros T_FECHA_PAREN bloco {
@@ -222,7 +224,7 @@ termo:
     ;
 
 /* -------------------------------------------------
-   fator: unidade atomica de uma expressao
+   fator: unidade atomica
    ------------------------------------------------- */
 fator:
     T_NUMERO                               { $$ = new NoNumero($1); }
@@ -235,9 +237,4 @@ fator:
 
 void yyerror(const char *s) {
     std::cerr << "Erro de sintaxe: " << s << "\n";
-}
-
-int main() {
-    yyparse();
-    return 0;
 }

@@ -8,13 +8,8 @@ TabelaSimbolos::TabelaSimbolos() {
     proximoEndereco = 0;
 
     keywords = {
-        "IF",
-        "ELSE",
-        "WHILE",
-        "INT",
-        "FLOAT",
-        "STRING",
-        "VOID"
+        "INT", "FLOAT", "IF", "ELSE",
+        "WHILE", "RETURN", "VOID"
     };
 }
 
@@ -184,4 +179,36 @@ void TabelaSimbolos::listarTodos() const {
     }
 
     std::cout << "========================================\n";
+}
+
+// =====================================================
+// OBTER POR ESCOPO
+// =====================================================
+
+std::vector<EntradaSimbolo> TabelaSimbolos::obterPorEscopo(
+    const std::string& escopo) const {
+
+    std::vector<EntradaSimbolo> resultado;
+    for (const auto& par : tabela) {
+        if (par.second.escopo == escopo)
+            resultado.push_back(par.second);
+    }
+    return resultado;
+}
+
+// =====================================================
+// LISTAR ESCOPOS DE FUNCOES
+// =====================================================
+
+std::vector<std::string> TabelaSimbolos::listarEscopos() const {
+    std::vector<std::string> escopos;
+    std::unordered_map<std::string, bool> vistos;
+    for (const auto& par : tabela) {
+        const std::string& e = par.second.escopo;
+        if (e != "global" && !vistos[e]) {
+            vistos[e] = true;
+            escopos.push_back(e);
+        }
+    }
+    return escopos;
 }
