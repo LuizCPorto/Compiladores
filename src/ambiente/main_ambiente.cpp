@@ -1,131 +1,187 @@
 #include <iostream>
 #include <string>
+
 #include "activation_record.h"
 #include "pilha_execucao.h"
-#include "tabela_simbolos.h"
+#include "../semantica/tabela_simbolos.h"
 
 // ============================================================
-// Simula a execução de:
-//
-//   INT soma(INT a, INT b) {
-//       INT r = a + b;
-//       return r;
-//   }
-//   INT main() {
-//       INT x = soma(2, 3);
-//   }
-//
-// Demonstrando: criação/destruição de ARs, pilha de execução,
-// tabela de símbolos com escopos, e geração de código intermediário.
+// Ambiente global
 // ============================================================
 
 TabelaSimbolos tabela;
-PilhaExecucao  pilha;
+PilhaExecucao pilha;
 
-// Gera código intermediário (três endereços)
+// ============================================================
+// Temporários para código intermediário
+// ============================================================
+
 static int contadorTemp = 1;
+
 std::string novoTemp() {
     return "t" + std::to_string(contadorTemp++);
 }
 
-// ----------------------------------------------------------
-// Simula a função soma(a, b)
-// ----------------------------------------------------------
+// ============================================================
+// Simula soma(a, b)
+// ============================================================
+
 int executarSoma(int valA, int valB) {
-    // === CALL: empilha AR de soma ===
+
+    // CALL
     pilha.chamarFuncao("soma", "main() linha apos chamada");
 
     RegistroAtivacao& ar = pilha.topo();
 
-    // Registra parâmetros na tabela de símbolos e no AR
+    // parâmetros
     tabela.inserirIdentificador("a", "INT", "soma");
     tabela.inserirIdentificador("b", "INT", "soma");
+
     ar.adicionarParametro("a", "INT", valA);
     ar.adicionarParametro("b", "INT", valB);
 
-    // Registra variável local r
+    tabela.atualizarValor("a", "soma", valA);
+    tabela.atualizarValor("b", "soma", valB);
+
+    // variável local
     tabela.inserirIdentificador("r", "INT", "soma");
+
     ar.adicionarVariavel("r", "INT", 0);
 
-    // === CÓDIGO INTERMEDIÁRIO: r = a + b ===
+    // código intermediário
     std::cout << "\n--- CODIGO INTERMEDIARIO (soma) ---\n";
+
     std::string t1 = novoTemp();
-    int valA_ar, valB_ar;
-    ar.obterValor("a", valA_ar);
-    ar.obterValor("b", valB_ar);
-    std::cout << t1 << " = " << valA_ar << " + " << valB_ar << "\n";
-    int resultadoSoma = valA_ar + valB_ar;
-    std::cout << "r = " << t1 << "  =>  r = " << resultadoSoma << "\n";
+
+    int a;
+    int b;
+
+    ar.obterValor("a", a);
+    ar.obterValor("b", b);
+
+    std::cout << t1 << " = " << a << " + " << b << "\n";
+
+    int resultado = a + b;
+
+    std::cout << "r = " << t1
+              << "  =>  r = "
+              << resultado << "\n";
+
     std::cout << "-----------------------------------\n";
 
-    // Atualiza r no AR e na tabela
-    ar.atribuir("r", resultadoSoma);
-    tabela.atualizarValor("r", "soma", resultadoSoma);
+    // atualiza r
+    ar.atribuir("r", resultado);
 
-    // Valor de retorno
-    ar.valorRetorno = resultadoSoma;
+    tabela.atualizarValor("r", "soma", resultado);
 
-    // === RETURN: desempilha AR de soma ===
-    int retorno = pilha.retornarFuncao();
-    return retorno;
+    // retorno
+    ar.valorRetorno = resultado;
+
+    return pilha.retornarFuncao();
 }
 
-// ----------------------------------------------------------
+// ============================================================
 // Simula main()
-// ----------------------------------------------------------
+// ============================================================
+
 void executarMain() {
-    // === CALL: empilha AR de main ===
-    pilha.chamarFuncao("main", "SO (sistema operacional)");
 
-    RegistroAtivacao& arMain = pilha.topo();
+    // CALL
+    pilha.chamarFuncao(
+        "main",
+        "SO (sistema operacional)"
+    );
 
-    // Declara variável local x em main
-    tabela.inserirIdentificador("x", "INT", "main");
-    arMain.adicionarVariavel("x", "INT", 0);
+    // variável x
+    tabela.inserirIdentificador(
+        "x",
+        "INT",
+        "main"
+    );
 
-    // === Chamada de soma(2, 3) ===
+    pilha.topo().adicionarVariavel(
+        "x",
+        "INT",
+        0
+    );
+
+    // chama soma
     std::cout << "\n[COMPUTE] Chamando soma(2, 3)...\n";
+
     int resultado = executarSoma(2, 3);
 
-    // === Atribuição x = resultado ===
+    // verifica variável declarada
+    if (!tabela.existe("x", "main")) {
+
+        std::cerr
+            << "[ERRO SEMANTICO] Variavel 'x' nao declarada!\n";
+
+        return;
+    }
+
+    // código intermediário
     std::cout << "\n--- CODIGO INTERMEDIARIO (main) ---\n";
+
     std::string t2 = novoTemp();
-    std::cout << t2 << " = retorno de soma  =>  " << t2 << " = " << resultado << "\n";
-    std::cout << "x = " << t2 << "  =>  x = " << resultado << "\n";
+
+    std::cout
+        << t2
+        << " = retorno de soma  =>  "
+        << t2
+        << " = "
+        << resultado
+        << "\n";
+
+    std::cout
+        << "x = "
+        << t2
+        << "  =>  x = "
+        << resultado
+        << "\n";
+
     std::cout << "-----------------------------------\n";
 
-    // Atualiza x no AR e na tabela
-    arMain.atribuir("x", resultado);
-    tabela.atualizarValor("x", "main", resultado);
+    // atribui x
+    pilha.topo().atribuir("x", resultado);
+
+    tabela.atualizarValor(
+        "x",
+        "main",
+        resultado
+    );
 
     std::cout << "\n[ASSIGN] x = " << resultado << "\n";
 
-    // Exibe estado final do AR de main
+    // estado final
     std::cout << "\n[INFO] Estado final do AR de main:\n";
+
     pilha.topo().imprimir();
 
-    // === Fim de main: desempilha ===
+    // RETURN
     pilha.retornarFuncao();
 
-    std::cout << "\n[END] main() encerrou. Pilha esvaziada.\n";
+    std::cout
+        << "\n[END] main() encerrou. Pilha esvaziada.\n";
 }
 
-// ----------------------------------------------------------
-// main do próprio ambiente de execução
-// ----------------------------------------------------------
+// ============================================================
+// Main do ambiente
+// ============================================================
+
 int main() {
+
     std::cout << "========================================\n";
     std::cout << "  AMBIENTE DE EXECUCAO - SimpleC\n";
     std::cout << "  Semana 7 - Compiladores\n";
     std::cout << "========================================\n";
 
     std::cout << "\n[LOAD] Programa carregado na memoria.\n";
-    std::cout << "[LOAD] Regioes: Codigo | Dados Globais | Heap | Stack\n";
 
-    // Executa a simulação
+    std::cout
+        << "[LOAD] Regioes: Codigo | Dados Globais | Heap | Stack\n";
+
     executarMain();
 
-    // Exibe tabela de símbolos final com escopos e endereços
     tabela.listarTodos();
 
     std::cout << "========================================\n";
