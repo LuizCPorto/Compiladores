@@ -6,14 +6,11 @@
 #include <iostream>
 #include <stdexcept>
 
-// Simula a Pilha de Execução (Stack) do programa
-// Cada chamada de função empilha um AR; cada retorno desempilha
 class PilhaExecucao {
 private:
     std::vector<RegistroAtivacao> pilha;
 
 public:
-    // Cria e empilha um novo Activation Record (chamada de função)
     void chamarFuncao(const std::string& nomeFuncao,
                       const std::string& enderecoRetorno) {
         std::string chamador = pilha.empty() ? "SO" : pilha.back().nomeFuncao;
@@ -25,14 +22,12 @@ public:
         pilha.emplace_back(nomeFuncao, enderecoRetorno, chamador);
     }
 
-    // Retorna o AR do topo (função atual em execução)
     RegistroAtivacao& topo() {
         if (pilha.empty())
             throw std::runtime_error("Pilha vazia! Nenhuma funcao em execucao.");
         return pilha.back();
     }
 
-    // Remove o AR do topo (retorno de função)
     int retornarFuncao() {
         if (pilha.empty())
             throw std::runtime_error("Pilha vazia! Nao ha funcao para retornar.");
@@ -48,19 +43,15 @@ public:
         return valorRet;
     }
 
-    // Verifica se a pilha está vazia
     bool vazia() const {
         return pilha.empty();
     }
 
-    // Tamanho atual da pilha
     int tamanho() const {
         return (int)pilha.size();
     }
 
-    // Busca uma variável subindo pela pilha (escopo léxico simplificado)
     bool buscarVariavel(const std::string& nome, int& out) {
-        // Busca do topo para a base
         for (int i = (int)pilha.size() - 1; i >= 0; --i) {
             if (pilha[i].obterValor(nome, out)) {
                 return true;
@@ -69,7 +60,6 @@ public:
         return false;
     }
 
-    // Imprime o estado visual da pilha (topo para base)
     void imprimirEstadoPilha() const {
         std::cout << "\n  === ESTADO DA PILHA (topo -> base) ===\n";
         if (pilha.empty()) {

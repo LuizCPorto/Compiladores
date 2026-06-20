@@ -3,19 +3,10 @@
 
 #include "../semantica/tabela_simbolos.h"
 
-// ============================================================
-// Global compartilhada com o parser (declarado extern la)
-// ============================================================
-
 TabelaSimbolos tabela;
 
-// Declaracoes do parser/lexer gerados pelo Bison/Flex
 extern int   yyparse();
 extern FILE* yyin;
-
-// ============================================================
-// Ponto de entrada do programa
-// ============================================================
 
 int main() {
     const char* arquivo = "exemplos/teste03.sc";

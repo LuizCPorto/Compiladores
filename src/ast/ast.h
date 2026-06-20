@@ -3,21 +3,17 @@
 
 #include <string>
 #include <vector>
+#include <iosfwd>
 
-/* =========================================================
-   Funções livres de apoio para imprimir a árvore.
-   ========================================================= */
+class TabelaSimbolos;
+
+void inicializarGeradorAssembly(std::ostream& saida, TabelaSimbolos& tabela);
+
 inline std::string astRamo(bool isLast)   { return isLast ? "L-- " : "|-- "; }
 inline std::string astIndent(bool isLast) { return isLast ? "    " : "|   "; }
 
-/* =========================================================
-   Reseta o contador de temporários do código intermediário.
-   ========================================================= */
 void resetarContadorAST();
 
-/* =========================================================
-   Classe base — interface comum a todos os nós da AST.
-   ========================================================= */
 class No {
 public:
     virtual ~No() {}
@@ -26,19 +22,11 @@ public:
 
     virtual void imprimirNo(const std::string& pre, bool isLast) = 0;
     virtual std::string gerarCodigo() = 0;
-
-    // Retorna representação infixa do nó (para exibir otimizações)
     virtual std::string paraExpressao() const = 0;
-
-    // Aplica otimizações independentes de máquina.
-    // Pode retornar 'this' (modificado in-place) ou um nó novo.
-    // O CHAMADOR deve deletar o nó original quando o retorno difere.
     virtual No* otimizar() { return this; }
+    virtual void gerarAssembly() {}
 };
 
-/* ---------------------------------------------------------
-   Literal inteiro: 5, 10, 123
-   --------------------------------------------------------- */
 class NoNumero : public No {
 public:
     int valor;
@@ -46,11 +34,9 @@ public:
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Literal float: 3.14, 2.5
-   --------------------------------------------------------- */
 class NoFloat : public No {
 public:
     float valor;
@@ -58,11 +44,9 @@ public:
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Variável: x, soma, resultado
-   --------------------------------------------------------- */
 class NoIdentificador : public No {
 public:
     std::string nome;
@@ -70,11 +54,9 @@ public:
     void imprimirNo(const std::string& pre, bool isLast) override;
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Operação aritmética: +  -  *  /
-   --------------------------------------------------------- */
 class NoOperacaoBinaria : public No {
 public:
     std::string op;
@@ -86,11 +68,9 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Declaração de variável: int x; / float y = 3.14;
-   --------------------------------------------------------- */
 class NoDeclaracao : public No {
 public:
     std::string tipo;
@@ -102,11 +82,9 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Atribuicao: x = expr;
-   --------------------------------------------------------- */
 class NoAtribuicao : public No {
 public:
     std::string nome;
@@ -117,11 +95,9 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Retorno: return expr;
-   --------------------------------------------------------- */
 class NoRetorno : public No {
 public:
     No* expressao;
@@ -131,11 +107,9 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Bloco / lista de comandos: { cmd1; cmd2; ... }
-   --------------------------------------------------------- */
 class NoBloco : public No {
 public:
     std::vector<No*> comandos;
@@ -145,11 +119,9 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
-/* ---------------------------------------------------------
-   Funcao: int soma(int a, int b) { ... }
-   --------------------------------------------------------- */
 class NoFuncao : public No {
 public:
     std::string tipo;
@@ -161,6 +133,7 @@ public:
     std::string gerarCodigo() override;
     std::string paraExpressao() const override;
     No* otimizar() override;
+    void gerarAssembly() override;
 };
 
 #endif

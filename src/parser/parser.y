@@ -4,6 +4,8 @@
 
 %{
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 #include <cstring>
@@ -84,6 +86,29 @@ programa:
         std::cout << "\n=== CODIGO INTERMEDIARIO OTIMIZADO ===\n";
         resetarContadorAST();
         raiz->gerarCodigo();
+
+        // ---- BACK-END: GERADOR DE CODIGO ASSEMBLY x86-64 ----
+        {
+            std::ostringstream asm_buf;
+            asm_buf << "# Gerado pelo Compilador SimpleC\n";
+            asm_buf << "# Sintaxe: AT&T/GAS  |  Target: x86-64 Linux\n";
+            asm_buf << "# Compilar: gcc -no-pie saida.asm -o programa\n\n";
+
+            inicializarGeradorAssembly(asm_buf, tabela);
+            raiz->gerarAssembly();
+
+            std::string codigo_asm = asm_buf.str();
+
+            std::cout << "\n=== CODIGO DE MAQUINA (Assembly x86-64) ===\n";
+            std::cout << codigo_asm;
+
+            std::ofstream arq("saida.asm");
+            if (arq) {
+                arq << codigo_asm;
+                arq.close();
+                std::cout << "\n[INFO] Assembly salvo em: saida.asm\n";
+            }
+        }
 
         std::cout << "\nCompilacao finalizada com sucesso!\n";
         tabela.listarTodos();

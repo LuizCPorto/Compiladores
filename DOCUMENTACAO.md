@@ -14,7 +14,7 @@
 
 ## Visão Geral
 
-O **SimpleC** é um mini-compilador desenvolvido como trabalho prático para a disciplina de Compiladores da UFT. O projeto implementa as seguintes etapas do processo de compilação:
+O **SimpleC** é um mini-compilador desenvolvido como trabalho prático para a disciplina de Compiladores da UFT. O projeto implementa um **pipeline completo** de compilação:
 
 - **Análise Léxica**: Tokenização do código-fonte com classificação de categorias (Flex)
 - **Análise Sintática**: Verificação gramatical e construção da AST (Bison)
@@ -22,6 +22,7 @@ O **SimpleC** é um mini-compilador desenvolvido como trabalho prático para a d
 - **Análise Semântica**: Tabela de símbolos com escopo, verificação de declarações e tipos
 - **Geração de Código Intermediário**: Código de 3 endereços com variáveis temporárias
 - **Otimização Independente de Máquina**: Simplificação algébrica, dobramento de constantes e eliminação de código morto
+- **Geração de Código Final (Back-end)**: Assembly x86-64 real em sintaxe AT&T/GAS, salvo em `saida.asm`
 
 O projeto utiliza as ferramentas:
 - **Flex** (`win_flex`): Para gerar o analisador léxico
@@ -73,8 +74,18 @@ A linguagem aceita pelo compilador usa a extensão `.sc` e suporta declarações
         │  - Eliminação de código morto │
         └────────┬──────────────────────┘
                  │
+        ┌────────▼──────────────────────┐
+        │  GERAÇÃO DE CÓDIGO FINAL      │  ◄── BACK-END
+        │  (AST::gerarAssembly)         │
+        │  - Instruções x86-64 reais    │
+        │  - Frame de pilha (prologue/  │
+        │    epilogue)                  │
+        │  - Convenção de chamada ABI   │
+        │  - Arquivo saida.asm          │
+        └────────┬──────────────────────┘
+                 │
         ┌────────▼────────┐
-        │ compilador.exe  │
+        │   saida.asm     │  Assembly compilável com GCC
         └─────────────────┘
 ```
 
@@ -194,7 +205,9 @@ fator            → T_NUMERO
 2. Gera e imprime o código intermediário original (`raiz->gerarCodigo()`)
 3. Executa as otimizações e exibe as transformações (`raiz->otimizar()`)
 4. Gera e imprime o código intermediário otimizado
-5. Lista o conteúdo final da tabela de símbolos (`tabela.listarTodos()`)
+5. Inicializa o gerador de assembly (`inicializarGeradorAssembly()`) e chama `raiz->gerarAssembly()`
+6. Exibe o assembly no console e grava `saida.asm`
+7. Lista o conteúdo final da tabela de símbolos (`tabela.listarTodos()`)
 
 **Exemplos válidos e inválidos:**
 ```
@@ -222,14 +235,17 @@ public:
     virtual std::string gerarCodigo() = 0;
     virtual std::string paraExpressao() const = 0;
     virtual No* otimizar() { return this; }
+    virtual void gerarAssembly() {}   // back-end: gera assembly x86-64
 };
 ```
 
-**Funções auxiliares para impressão:**
+**Funções auxiliares:**
 ```cpp
-inline std::string astRamo(bool isLast);   // "L-- " ou "|-- "
-inline std::string astIndent(bool isLast); // "    " ou "|   "
-void resetarContadorAST();                 // reseta contador de temporários
+inline std::string astRamo(bool isLast);                            // "L-- " ou "|-- "
+inline std::string astIndent(bool isLast);                          // "    " ou "|   "
+void resetarContadorAST();                                          // reseta contador de temporários
+void inicializarGeradorAssembly(std::ostream& saida,               // inicializa o back-end
+                                 TabelaSimbolos& tabela);
 ```
 
 **Classes de nó:**
@@ -349,7 +365,115 @@ Otimizações aplicadas:
 
 ---
 
-### 6. Ambiente de Execução (`src/ambiente/`) *(módulo auxiliar)*
+### 6. Geração de Código Final — Back-end (`src/ast/ast.cpp`)
+
+O back-end percorre a AST **já otimizada** e emite instruções assembly x86-64 em sintaxe AT&T/GAS. A saída é capturada em um `std::ostringstream`, exibida no console e gravada em `saida.asm`.
+
+#### Inicialização
+
+```cpp
+void inicializarGeradorAssembly(std::ostream& saida, TabelaSimbolos& tabela);
+```
+
+Configura o estado estático do gerador antes de chamar `raiz->gerarAssembly()`.
+
+#### Estado interno (variáveis estáticas em `ast.cpp`)
+
+| Variável | Tipo | Papel |
+|----------|------|-------|
+| `asm_saida` | `std::ostream*` | stream de saída (console ou arquivo) |
+| `asm_tabela` | `TabelaSimbolos*` | consulta de endereços e escopos |
+| `asm_escopo` | `std::string` | função em geração ou `"global"` |
+| `asm_offsets` | `map<string,int>` | `nome → offset` negativo relativo a `%rbp` |
+| `asm_ret_label` | `std::string` | label de epílogo (ex: `.Lmain_ret`) |
+
+#### Estratégia de avaliação de expressões
+
+`NoOperacaoBinaria::gerarAssembly()` usa a pilha de hardware como área de rascunho:
+
+```
+1. Avalia operando esquerdo  → resultado em %eax
+2. pushq %rax                → salva na pilha
+3. Avalia operando direito   → resultado em %eax
+4. popq %rcx                 → recupera operando esquerdo
+5. Aplica operação           → resultado em %eax
+```
+
+| Operador | Instrução gerada |
+|----------|-----------------|
+| `+` | `addl %ecx, %eax` |
+| `-` | `subl %eax, %ecx` / `movl %ecx, %eax` |
+| `*` | `imull %ecx, %eax` |
+| `/` | `xchgl %eax, %ecx` / `cdq` / `idivl %ecx` |
+
+#### Layout do frame de pilha
+
+Variáveis locais são ordenadas pelo campo `endereco` da tabela de símbolos e mapeadas para offsets negativos em relação a `%rbp`:
+
+```
+endereco 0  → -4(%rbp)
+endereco 4  → -8(%rbp)
+endereco 4N → -(4N+4)(%rbp)
+```
+
+O tamanho do frame (`subq $N, %rsp`) é arredondado para múltiplo de 16 bytes (requisito do ABI x86-64).
+
+#### Parâmetros formais (System V AMD64 ABI)
+
+Parâmetros são identificados como variáveis do escopo sem `NoDeclaracao` correspondente no corpo. No prólogo, são despejados dos registradores para a pilha:
+
+```asm
+movl  %edi, -4(%rbp)   # 1º parâmetro inteiro
+movl  %esi, -8(%rbp)   # 2º parâmetro inteiro
+# ...até 6 parâmetros (%edi %esi %edx %ecx %r8d %r9d)
+```
+
+#### Seções geradas
+
+| Situação | Seção emitida |
+|----------|--------------|
+| Variáveis globais | `.section .data` com `.long` / `.float` |
+| Funções e `main` | `.section .text` com prólogo, corpo e epílogo |
+
+#### Exemplo de saída (trecho de `teste03.sc`)
+
+```asm
+    .section    .text
+
+    .globl  main
+main:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    subq    $32, %rsp           # 7 variavel(is) * 4 bytes
+    # int a = 10
+    movl    $10, -4(%rbp)
+    # int r = (((f + g) - h) + ((a + b) * (f + g)))
+    movl    -16(%rbp), %eax     # f
+    pushq   %rax
+    movl    -20(%rbp), %eax     # g
+    popq    %rcx
+    addl    %ecx, %eax          # f + g
+    ...
+    # return r
+    movl    -28(%rbp), %eax
+    jmp     .Lmain_ret
+.Lmain_ret:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+```
+
+Para compilar e executar o assembly gerado (Linux/WSL):
+
+```bash
+gcc -no-pie saida.asm -o programa
+./programa
+echo $?   # valor de retorno de main
+```
+
+---
+
+### 7. Ambiente de Execução (`src/ambiente/`) *(módulo auxiliar)*
 
 Módulo independente do pipeline principal que implementa as estruturas de pilha de chamadas para fins didáticos.
 
@@ -427,12 +551,13 @@ Compiladores/
          │ NoBloco* (raiz da AST)
          ▼
 ┌──────────────────────────┐
-│ AST: imprimir()          │  Exibe a árvore hierárquica
-│ AST: gerarCodigo()       │  Código intermediário original (t1, t2...)
-│ AST: otimizar()          │  Aplica transformações, exibe regras usadas
-│ AST: gerarCodigo() x2    │  Código intermediário otimizado (contador reset)
-│ Tabela: listarTodos()    │  Tabela de símbolos final
-└──────────────────────────┘
+│ AST: imprimir()              │  Exibe a árvore hierárquica
+│ AST: gerarCodigo()           │  Código intermediário original (t1, t2...)
+│ AST: otimizar()              │  Aplica transformações, exibe regras usadas
+│ AST: gerarCodigo() x2        │  Código intermediário otimizado (contador reset)
+│ AST: gerarAssembly()         │  Assembly x86-64 → console + saida.asm
+│ Tabela: listarTodos()        │  Tabela de símbolos final
+└──────────────────────────────┘
 ```
 
 ### Integração entre Componentes
@@ -496,7 +621,10 @@ O arquivo de entrada é definido diretamente em `main_ambiente.cpp` (padrão: `e
 3. Código intermediário original (3 endereços)
 4. Otimizações aplicadas (regras e transformações)
 5. Código intermediário otimizado
-6. Tabela de símbolos final
+6. **Assembly x86-64** — instruções reais geradas pelo back-end
+7. Tabela de símbolos final
+
+O arquivo **`saida.asm`** é gravado automaticamente a cada execução.
 
 ---
 
@@ -524,11 +652,12 @@ O arquivo de entrada é definido diretamente em `main_ambiente.cpp` (padrão: `e
 - **Windows**: Scripts em `.bat`; ferramentas `win_flex` e `win_bison`
 
 ### Funcionalidades Pendentes
-- Regras gramaticais para `if/else` e `while` no parser
-- Verificação de compatibilidade de tipos em expressões (int vs float)
-- Geração de código para estruturas de controle de fluxo
+- Regras gramaticais para `if/else` e `while` no parser (e geração de assembly correspondente com labels de desvio)
+- Verificação de compatibilidade de tipos em expressões (`int` vs `float`) com conversão implícita
+- Geração de assembly correta para floats (atualmente truncados para inteiro)
+- Suporte a chamadas de função no código-fonte (hoje apenas definições são suportadas)
 
 ---
 
-**Documento atualizado em:** Maio de 2026
-**Versão:** 3.0
+**Documento atualizado em:** Junho de 2026
+**Versão:** 4.0

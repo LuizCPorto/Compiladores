@@ -1,9 +1,5 @@
 #include "tabela_simbolos.h"
 
-// =====================================================
-// CONSTRUTOR
-// =====================================================
-
 TabelaSimbolos::TabelaSimbolos() {
     proximoEndereco = 0;
 
@@ -13,20 +9,12 @@ TabelaSimbolos::TabelaSimbolos() {
     };
 }
 
-// =====================================================
-// FUNÇÃO AUXILIAR
-// =====================================================
-
 std::string TabelaSimbolos::chave(
     const std::string& escopo,
     const std::string& nome) const {
 
     return escopo + "::" + nome;
 }
-
-// =====================================================
-// INSERÇÃO
-// =====================================================
 
 bool TabelaSimbolos::inserirIdentificador(
     const std::string& nome,
@@ -60,10 +48,6 @@ bool TabelaSimbolos::inserirIdentificador(
     return true;
 }
 
-// =====================================================
-// EXISTE
-// =====================================================
-
 bool TabelaSimbolos::existe(
     const std::string& nome,
     const std::string& escopoAtual) const {
@@ -76,10 +60,6 @@ bool TabelaSimbolos::existe(
 
     return false;
 }
-
-// =====================================================
-// TIPO
-// =====================================================
 
 std::string TabelaSimbolos::obterTipo(
     const std::string& nome,
@@ -98,10 +78,6 @@ std::string TabelaSimbolos::obterTipo(
     return "";
 }
 
-// =====================================================
-// ENDEREÇO
-// =====================================================
-
 int TabelaSimbolos::obterEndereco(
     const std::string& nome,
     const std::string& escopoAtual) const {
@@ -118,10 +94,6 @@ int TabelaSimbolos::obterEndereco(
 
     return -1;
 }
-
-// =====================================================
-// ATUALIZA VALOR
-// =====================================================
 
 void TabelaSimbolos::atualizarValor(
     const std::string& nome,
@@ -142,10 +114,6 @@ void TabelaSimbolos::atualizarValor(
     }
 }
 
-// =====================================================
-// KEYWORDS
-// =====================================================
-
 bool TabelaSimbolos::ehKeyword(
     const std::string& palavra) const {
 
@@ -156,10 +124,6 @@ bool TabelaSimbolos::ehKeyword(
 
     return false;
 }
-
-// =====================================================
-// LISTAR
-// =====================================================
 
 void TabelaSimbolos::listarTodos() const {
 
@@ -181,10 +145,6 @@ void TabelaSimbolos::listarTodos() const {
     std::cout << "========================================\n";
 }
 
-// =====================================================
-// OBTER POR ESCOPO
-// =====================================================
-
 std::vector<EntradaSimbolo> TabelaSimbolos::obterPorEscopo(
     const std::string& escopo) const {
 
@@ -195,10 +155,6 @@ std::vector<EntradaSimbolo> TabelaSimbolos::obterPorEscopo(
     }
     return resultado;
 }
-
-// =====================================================
-// LISTAR ESCOPOS DE FUNCOES
-// =====================================================
 
 std::vector<std::string> TabelaSimbolos::listarEscopos() const {
     std::vector<std::string> escopos;

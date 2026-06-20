@@ -70,6 +70,8 @@
 #line 5 "src/parser/parser.y"
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 #include <cstring>
@@ -86,7 +88,7 @@ std::string escopoAtual    = "global";
 std::string funcaoTipoAtual;
 std::string funcaoNomeAtual;
 
-#line 90 "src/parser/parser.tab.c"
+#line 92 "src/parser/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -521,10 +523,10 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    53,    53,    98,   102,   113,   114,   115,   116,   123,
-     124,   134,   139,   157,   170,   179,   180,   187,   191,   198,
-     199,   206,   207,   214,   227,   238,   239,   240,   247,   248,
-     249,   256,   257,   258,   259
+       0,    55,    55,   123,   127,   138,   139,   140,   141,   148,
+     149,   159,   164,   182,   195,   204,   205,   212,   216,   223,
+     224,   231,   232,   239,   252,   263,   264,   265,   272,   273,
+     274,   281,   282,   283,   284
 };
 #endif
 
@@ -1134,7 +1136,7 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* programa: lista_comandos  */
-#line 53 "src/parser/parser.y"
+#line 55 "src/parser/parser.y"
                    {
         NoBloco* raiz = static_cast<NoBloco*>((yyvsp[0].ast_no));
 
@@ -1170,80 +1172,103 @@ yyreduce:
         resetarContadorAST();
         raiz->gerarCodigo();
 
+        // ---- BACK-END: GERADOR DE CODIGO ASSEMBLY x86-64 ----
+        {
+            std::ostringstream asm_buf;
+            asm_buf << "# Gerado pelo Compilador SimpleC\n";
+            asm_buf << "# Sintaxe: AT&T/GAS  |  Target: x86-64 Linux\n";
+            asm_buf << "# Compilar: gcc -no-pie saida.asm -o programa\n\n";
+
+            inicializarGeradorAssembly(asm_buf, tabela);
+            raiz->gerarAssembly();
+
+            std::string codigo_asm = asm_buf.str();
+
+            std::cout << "\n=== CODIGO DE MAQUINA (Assembly x86-64) ===\n";
+            std::cout << codigo_asm;
+
+            std::ofstream arq("saida.asm");
+            if (arq) {
+                arq << codigo_asm;
+                arq.close();
+                std::cout << "\n[INFO] Assembly salvo em: saida.asm\n";
+            }
+        }
+
         std::cout << "\nCompilacao finalizada com sucesso!\n";
         tabela.listarTodos();
         delete raiz;
     }
-#line 1178 "src/parser/parser.tab.c"
+#line 1203 "src/parser/parser.tab.c"
     break;
 
   case 3: /* lista_comandos: lista_comandos comando  */
-#line 98 "src/parser/parser.y"
+#line 123 "src/parser/parser.y"
                            {
         static_cast<NoBloco*>((yyvsp[-1].ast_no))->adicionar((yyvsp[0].ast_no));
         (yyval.ast_no) = (yyvsp[-1].ast_no);
     }
-#line 1187 "src/parser/parser.tab.c"
+#line 1212 "src/parser/parser.tab.c"
     break;
 
   case 4: /* lista_comandos: comando  */
-#line 102 "src/parser/parser.y"
+#line 127 "src/parser/parser.y"
               {
         NoBloco* b = new NoBloco();
         b->adicionar((yyvsp[0].ast_no));
         (yyval.ast_no) = b;
     }
-#line 1197 "src/parser/parser.tab.c"
+#line 1222 "src/parser/parser.tab.c"
     break;
 
   case 5: /* comando: declaracao  */
-#line 113 "src/parser/parser.y"
+#line 138 "src/parser/parser.y"
                 { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1203 "src/parser/parser.tab.c"
+#line 1228 "src/parser/parser.tab.c"
     break;
 
   case 6: /* comando: atribuicao  */
-#line 114 "src/parser/parser.y"
+#line 139 "src/parser/parser.y"
                  { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1209 "src/parser/parser.tab.c"
+#line 1234 "src/parser/parser.tab.c"
     break;
 
   case 7: /* comando: retorno  */
-#line 115 "src/parser/parser.y"
+#line 140 "src/parser/parser.y"
                  { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1215 "src/parser/parser.tab.c"
+#line 1240 "src/parser/parser.tab.c"
     break;
 
   case 8: /* comando: funcao  */
-#line 116 "src/parser/parser.y"
+#line 141 "src/parser/parser.y"
                  { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1221 "src/parser/parser.tab.c"
+#line 1246 "src/parser/parser.tab.c"
     break;
 
   case 9: /* tipo: T_INT  */
-#line 123 "src/parser/parser.y"
+#line 148 "src/parser/parser.y"
             { (yyval.texto) = strdup("int"); }
-#line 1227 "src/parser/parser.tab.c"
+#line 1252 "src/parser/parser.tab.c"
     break;
 
   case 10: /* tipo: T_FLOAT  */
-#line 124 "src/parser/parser.y"
+#line 149 "src/parser/parser.y"
               { (yyval.texto) = strdup("float"); }
-#line 1233 "src/parser/parser.tab.c"
+#line 1258 "src/parser/parser.tab.c"
     break;
 
   case 11: /* declaracao: tipo T_ID T_PONTOVIRGULA  */
-#line 134 "src/parser/parser.y"
+#line 159 "src/parser/parser.y"
                              {
         tabela.inserirIdentificador((yyvsp[-1].texto), (yyvsp[-2].texto), escopoAtual);
         (yyval.ast_no) = new NoDeclaracao(std::string((yyvsp[-2].texto)), std::string((yyvsp[-1].texto)), nullptr);
         free((yyvsp[-2].texto)); free((yyvsp[-1].texto));
     }
-#line 1243 "src/parser/parser.tab.c"
+#line 1268 "src/parser/parser.tab.c"
     break;
 
   case 12: /* declaracao: tipo T_ID T_ATRIB expressao T_PONTOVIRGULA  */
-#line 139 "src/parser/parser.y"
+#line 164 "src/parser/parser.y"
                                                  {
         tabela.inserirIdentificador((yyvsp[-3].texto), (yyvsp[-4].texto), escopoAtual);
         // Captura valor inicial quando for literal simples
@@ -1254,153 +1279,153 @@ yyreduce:
         (yyval.ast_no) = new NoDeclaracao(std::string((yyvsp[-4].texto)), std::string((yyvsp[-3].texto)), (yyvsp[-1].ast_no));
         free((yyvsp[-4].texto)); free((yyvsp[-3].texto));
     }
-#line 1258 "src/parser/parser.tab.c"
+#line 1283 "src/parser/parser.tab.c"
     break;
 
   case 13: /* atribuicao: T_ID T_ATRIB expressao T_PONTOVIRGULA  */
-#line 157 "src/parser/parser.y"
+#line 182 "src/parser/parser.y"
                                           {
         if (!tabela.existe((yyvsp[-3].texto), escopoAtual))
             std::cerr << "[ERRO SEMANTICO] Variavel '" << (yyvsp[-3].texto) << "' nao declarada!\n";
         (yyval.ast_no) = new NoAtribuicao(std::string((yyvsp[-3].texto)), (yyvsp[-1].ast_no));
         free((yyvsp[-3].texto));
     }
-#line 1269 "src/parser/parser.tab.c"
+#line 1294 "src/parser/parser.tab.c"
     break;
 
   case 14: /* retorno: T_RETURN expressao T_PONTOVIRGULA  */
-#line 170 "src/parser/parser.y"
+#line 195 "src/parser/parser.y"
                                       {
         (yyval.ast_no) = new NoRetorno((yyvsp[-1].ast_no));
     }
-#line 1277 "src/parser/parser.tab.c"
+#line 1302 "src/parser/parser.tab.c"
     break;
 
   case 15: /* nome_funcao: T_ID  */
-#line 179 "src/parser/parser.y"
+#line 204 "src/parser/parser.y"
             { (yyval.texto) = (yyvsp[0].texto); }
-#line 1283 "src/parser/parser.tab.c"
+#line 1308 "src/parser/parser.tab.c"
     break;
 
   case 16: /* nome_funcao: T_MAIN  */
-#line 180 "src/parser/parser.y"
+#line 205 "src/parser/parser.y"
              { (yyval.texto) = strdup("main"); }
-#line 1289 "src/parser/parser.tab.c"
+#line 1314 "src/parser/parser.tab.c"
     break;
 
   case 17: /* lista_parametros: lista_parametros T_VIRGULA tipo T_ID  */
-#line 187 "src/parser/parser.y"
+#line 212 "src/parser/parser.y"
                                          {
         tabela.inserirIdentificador((yyvsp[0].texto), (yyvsp[-1].texto), escopoAtual);
         free((yyvsp[-1].texto)); free((yyvsp[0].texto));
     }
-#line 1298 "src/parser/parser.tab.c"
+#line 1323 "src/parser/parser.tab.c"
     break;
 
   case 18: /* lista_parametros: tipo T_ID  */
-#line 191 "src/parser/parser.y"
+#line 216 "src/parser/parser.y"
                 {
         tabela.inserirIdentificador((yyvsp[0].texto), (yyvsp[-1].texto), escopoAtual);
         free((yyvsp[-1].texto)); free((yyvsp[0].texto));
     }
-#line 1307 "src/parser/parser.tab.c"
+#line 1332 "src/parser/parser.tab.c"
     break;
 
   case 21: /* bloco: T_ABRE_CHAVE lista_comandos T_FECHA_CHAVE  */
-#line 206 "src/parser/parser.y"
+#line 231 "src/parser/parser.y"
                                               { (yyval.ast_no) = (yyvsp[-1].ast_no); }
-#line 1313 "src/parser/parser.tab.c"
+#line 1338 "src/parser/parser.tab.c"
     break;
 
   case 22: /* bloco: T_ABRE_CHAVE T_FECHA_CHAVE  */
-#line 207 "src/parser/parser.y"
+#line 232 "src/parser/parser.y"
                                               { (yyval.ast_no) = new NoBloco(); }
-#line 1319 "src/parser/parser.tab.c"
+#line 1344 "src/parser/parser.tab.c"
     break;
 
   case 23: /* inicio_funcao: tipo nome_funcao T_ABRE_PAREN  */
-#line 214 "src/parser/parser.y"
+#line 239 "src/parser/parser.y"
                                   {
         funcaoTipoAtual = (yyvsp[-2].texto);
         funcaoNomeAtual = (yyvsp[-1].texto);
         escopoAtual     = (yyvsp[-1].texto);
         free((yyvsp[-2].texto)); free((yyvsp[-1].texto));
     }
-#line 1330 "src/parser/parser.tab.c"
+#line 1355 "src/parser/parser.tab.c"
     break;
 
   case 24: /* funcao: inicio_funcao parametros T_FECHA_PAREN bloco  */
-#line 227 "src/parser/parser.y"
+#line 252 "src/parser/parser.y"
                                                  {
         NoBloco* corpo = static_cast<NoBloco*>((yyvsp[0].ast_no));
         (yyval.ast_no) = new NoFuncao(funcaoTipoAtual, funcaoNomeAtual, corpo);
         escopoAtual = "global";
     }
-#line 1340 "src/parser/parser.tab.c"
+#line 1365 "src/parser/parser.tab.c"
     break;
 
   case 25: /* expressao: expressao T_MAIS termo  */
-#line 238 "src/parser/parser.y"
+#line 263 "src/parser/parser.y"
                             { (yyval.ast_no) = new NoOperacaoBinaria("+", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
-#line 1346 "src/parser/parser.tab.c"
+#line 1371 "src/parser/parser.tab.c"
     break;
 
   case 26: /* expressao: expressao T_MENOS termo  */
-#line 239 "src/parser/parser.y"
+#line 264 "src/parser/parser.y"
                               { (yyval.ast_no) = new NoOperacaoBinaria("-", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
-#line 1352 "src/parser/parser.tab.c"
+#line 1377 "src/parser/parser.tab.c"
     break;
 
   case 27: /* expressao: termo  */
-#line 240 "src/parser/parser.y"
+#line 265 "src/parser/parser.y"
                             { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1358 "src/parser/parser.tab.c"
+#line 1383 "src/parser/parser.tab.c"
     break;
 
   case 28: /* termo: termo T_MULT fator  */
-#line 247 "src/parser/parser.y"
+#line 272 "src/parser/parser.y"
                        { (yyval.ast_no) = new NoOperacaoBinaria("*", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
-#line 1364 "src/parser/parser.tab.c"
+#line 1389 "src/parser/parser.tab.c"
     break;
 
   case 29: /* termo: termo T_DIV fator  */
-#line 248 "src/parser/parser.y"
+#line 273 "src/parser/parser.y"
                          { (yyval.ast_no) = new NoOperacaoBinaria("/", (yyvsp[-2].ast_no), (yyvsp[0].ast_no)); }
-#line 1370 "src/parser/parser.tab.c"
+#line 1395 "src/parser/parser.tab.c"
     break;
 
   case 30: /* termo: fator  */
-#line 249 "src/parser/parser.y"
+#line 274 "src/parser/parser.y"
                          { (yyval.ast_no) = (yyvsp[0].ast_no); }
-#line 1376 "src/parser/parser.tab.c"
+#line 1401 "src/parser/parser.tab.c"
     break;
 
   case 31: /* fator: T_NUMERO  */
-#line 256 "src/parser/parser.y"
+#line 281 "src/parser/parser.y"
                                            { (yyval.ast_no) = new NoNumero((yyvsp[0].valorInteiro)); }
-#line 1382 "src/parser/parser.tab.c"
+#line 1407 "src/parser/parser.tab.c"
     break;
 
   case 32: /* fator: T_NUMERO_FLOAT  */
-#line 257 "src/parser/parser.y"
+#line 282 "src/parser/parser.y"
                                            { (yyval.ast_no) = new NoFloat((yyvsp[0].valorFloat)); }
-#line 1388 "src/parser/parser.tab.c"
+#line 1413 "src/parser/parser.tab.c"
     break;
 
   case 33: /* fator: T_ID  */
-#line 258 "src/parser/parser.y"
+#line 283 "src/parser/parser.y"
                                            { (yyval.ast_no) = new NoIdentificador(std::string((yyvsp[0].texto))); free((yyvsp[0].texto)); }
-#line 1394 "src/parser/parser.tab.c"
+#line 1419 "src/parser/parser.tab.c"
     break;
 
   case 34: /* fator: T_ABRE_PAREN expressao T_FECHA_PAREN  */
-#line 259 "src/parser/parser.y"
+#line 284 "src/parser/parser.y"
                                            { (yyval.ast_no) = (yyvsp[-1].ast_no); }
-#line 1400 "src/parser/parser.tab.c"
+#line 1425 "src/parser/parser.tab.c"
     break;
 
 
-#line 1404 "src/parser/parser.tab.c"
+#line 1429 "src/parser/parser.tab.c"
 
       default: break;
     }
@@ -1594,7 +1619,7 @@ yyreturn:
   return yyresult;
 }
 
-#line 262 "src/parser/parser.y"
+#line 287 "src/parser/parser.y"
 
 
 void yyerror(const char *s) {
